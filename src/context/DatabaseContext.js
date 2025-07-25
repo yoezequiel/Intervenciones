@@ -24,6 +24,7 @@ export const DatabaseProvider = ({ children }) => {
       const database = await SQLite.openDatabaseAsync('interventions.db');
       setDb(database);
 
+      // Crear tabla definitiva - estructura final
       await database.execAsync(`
         CREATE TABLE IF NOT EXISTS interventions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
