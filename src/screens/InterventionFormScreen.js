@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import {
   TextInput,
@@ -13,6 +13,76 @@ import {
 } from 'react-native-paper';
 import { useDatabase } from '../context/DatabaseContext';
 import { InterventionType } from '../types';
+
+// Componente memoizado para los botones de tiempo
+const TimeButton = memo(({ label, value, onChangeText, getCurrentTime }) => (
+  <View style={styles.timeRow}>
+    <View style={styles.timeInput}>
+      <TextInput
+        label={label}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder="HH:MM"
+        mode="outlined"
+      />
+      <Button mode="text" onPress={() => onChangeText(getCurrentTime())}>
+        Ahora
+      </Button>
+    </View>
+  </View>
+));
+
+// Componente memoizado para los chips de tipo
+const TypeChip = memo(({ option, isSelected, onPress }) => (
+  <Chip
+    key={option.value}
+    mode={isSelected ? 'flat' : 'outlined'}
+    selected={isSelected}
+    onPress={onPress}
+    style={styles.typeChip}
+  >
+    {option.label}
+  </Chip>
+));
+
+// Componente memoizado para servicios
+const ServiceItem = memo(({ service, index, onRemove }) => (
+  <View style={styles.serviceItem}>
+    <View style={styles.serviceInfo}>
+      <Text variant="bodyLarge">{service.type}</Text>
+      <Text variant="bodySmall" style={styles.serviceDetails}>
+        IDs: {service.ids || 'N/A'} | Personal: {service.personnel || 'N/A'}
+      </Text>
+    </View>
+    <IconButton icon="delete" onPress={() => onRemove(index)} />
+  </View>
+));
+
+// Componente memoizado para víctimas
+const VictimItem = memo(({ victim, index, onRemove }) => (
+  <View style={styles.victimItem}>
+    <View style={styles.victimInfo}>
+      <Text variant="bodyLarge">{victim.name}</Text>
+      {victim.description && (
+        <Text variant="bodySmall" style={styles.victimDescription}>
+          {victim.description}
+        </Text>
+      )}
+    </View>
+    <IconButton icon="delete" onPress={() => onRemove(index)} />
+  </View>
+));
+
+// Componente memoizado para testigos
+const WitnessChip = memo(({ witness, index, onRemove }) => (
+  <Chip
+    key={index}
+    onClose={() => onRemove(index)}
+    style={styles.chip}
+  >
+    {witness}
+  </Chip>
+));
 
 const InterventionFormScreen = ({ navigation }) => {
   const { addIntervention } = useDatabase();
@@ -43,57 +113,66 @@ const InterventionFormScreen = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
 
-  const serviceTypes = ['Policía', 'Ambulancia', 'Grúa', 'Electricidad', 'Gas', 'Otro'];
+  // Memoizar constantes para evitar recreación en cada render
+  const serviceTypes = useMemo(() => ['Policía', 'Ambulancia', 'Grúa', 'Electricidad', 'Gas', 'Otro'], []);
 
-  const getCurrentTime = () => {
+  const typeOptions = useMemo(() =>
+    Object.values(InterventionType).map(value => ({
+      value,
+      label: value
+    })), []
+  );
+
+  // Memoizar funciones para evitar re-renders
+  const getCurrentTime = useCallback(() => {
     const now = new Date();
     return now.toTimeString().slice(0, 5);
-  };
+  }, []);
 
-  const addService = () => {
+  const addService = useCallback(() => {
     if (newServiceType.trim()) {
       const newService = {
         type: newServiceType,
         ids: newServiceIds || '',
         personnel: newServicePersonnel || ''
       };
-      setOtherServices([...otherServices, newService]);
+      setOtherServices(prev => [...prev, newService]);
       setNewServiceIds('');
       setNewServicePersonnel('');
     }
-  };
+  }, [newServiceType, newServiceIds, newServicePersonnel]);
 
-  const removeService = (index) => {
-    setOtherServices(otherServices.filter((_, i) => i !== index));
-  };
+  const removeService = useCallback((index) => {
+    setOtherServices(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const addWitness = () => {
+  const addWitness = useCallback(() => {
     if (newWitness.trim()) {
-      setWitnesses([...witnesses, newWitness.trim()]);
+      setWitnesses(prev => [...prev, newWitness.trim()]);
       setNewWitness('');
     }
-  };
+  }, [newWitness]);
 
-  const removeWitness = (index) => {
-    setWitnesses(witnesses.filter((_, i) => i !== index));
-  };
+  const removeWitness = useCallback((index) => {
+    setWitnesses(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const addVictim = () => {
+  const addVictim = useCallback(() => {
     if (newVictimName.trim()) {
-      setVictims([...victims, {
+      setVictims(prev => [...prev, {
         name: newVictimName.trim(),
         description: newVictimDescription.trim() || undefined
       }]);
       setNewVictimName('');
       setNewVictimDescription('');
     }
-  };
+  }, [newVictimName, newVictimDescription]);
 
-  const removeVictim = (index) => {
-    setVictims(victims.filter((_, i) => i !== index));
-  };
+  const removeVictim = useCallback((index) => {
+    setVictims(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setLoading(true);
     try {
       await addIntervention({
@@ -118,62 +197,31 @@ const InterventionFormScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const typeOptions = Object.values(InterventionType).map(value => ({
-    value,
-    label: value
-  }));
+  }, [addIntervention, callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes, navigation]);
 
   return (
     <ScrollView style={styles.container}>
       <Card style={styles.card}>
         <Card.Content>
           <Title>Datos Cronológicos</Title>
-          <View style={styles.timeRow}>
-            <View style={styles.timeInput}>
-              <TextInput
-                label="Hora del llamado"
-                value={callTime}
-                onChangeText={setCallTime}
-                placeholder="HH:MM"
-                mode="outlined"
-              />
-              <Button mode="text" onPress={() => setCallTime(getCurrentTime())}>
-                Ahora
-              </Button>
-            </View>
-          </View>
-
-          <View style={styles.timeRow}>
-            <View style={styles.timeInput}>
-              <TextInput
-                label="Hora de salida"
-                value={departureTime}
-                onChangeText={setDepartureTime}
-                placeholder="HH:MM"
-                mode="outlined"
-              />
-              <Button mode="text" onPress={() => setDepartureTime(getCurrentTime())}>
-                Ahora
-              </Button>
-            </View>
-          </View>
-
-          <View style={styles.timeRow}>
-            <View style={styles.timeInput}>
-              <TextInput
-                label="Hora de regreso"
-                value={returnTime}
-                onChangeText={setReturnTime}
-                placeholder="HH:MM"
-                mode="outlined"
-              />
-              <Button mode="text" onPress={() => setReturnTime(getCurrentTime())}>
-                Ahora
-              </Button>
-            </View>
-          </View>
+          <TimeButton
+            label="Hora del llamado"
+            value={callTime}
+            onChangeText={setCallTime}
+            getCurrentTime={getCurrentTime}
+          />
+          <TimeButton
+            label="Hora de salida"
+            value={departureTime}
+            onChangeText={setDepartureTime}
+            getCurrentTime={getCurrentTime}
+          />
+          <TimeButton
+            label="Hora de regreso"
+            value={returnTime}
+            onChangeText={setReturnTime}
+            getCurrentTime={getCurrentTime}
+          />
         </Card.Content>
       </Card>
 
@@ -196,15 +244,12 @@ const InterventionFormScreen = ({ navigation }) => {
           <Title>Tipo de Intervención</Title>
           <View style={styles.typeContainer}>
             {typeOptions.map((option) => (
-              <Chip
+              <TypeChip
                 key={option.value}
-                mode={type === option.value ? 'flat' : 'outlined'}
-                selected={type === option.value}
+                option={option}
+                isSelected={type === option.value}
                 onPress={() => setType(option.value)}
-                style={styles.typeChip}
-              >
-                {option.label}
-              </Chip>
+              />
             ))}
           </View>
         </Card.Content>
@@ -270,15 +315,12 @@ const InterventionFormScreen = ({ navigation }) => {
                 Servicios Agregados:
               </Text>
               {otherServices.map((service, index) => (
-                <View key={index} style={styles.serviceItem}>
-                  <View style={styles.serviceInfo}>
-                    <Text variant="bodyLarge">{service.type}</Text>
-                    <Text variant="bodySmall" style={styles.serviceDetails}>
-                      IDs: {service.ids || 'N/A'} | Personal: {service.personnel || 'N/A'}
-                    </Text>
-                  </View>
-                  <IconButton icon="delete" onPress={() => removeService(index)} />
-                </View>
+                <ServiceItem
+                  key={index}
+                  service={service}
+                  index={index}
+                  onRemove={removeService}
+                />
               ))}
             </View>
           )}
@@ -300,13 +342,12 @@ const InterventionFormScreen = ({ navigation }) => {
           </View>
           <View style={styles.chipContainer}>
             {witnesses.map((witness, index) => (
-              <Chip
+              <WitnessChip
                 key={index}
-                onClose={() => removeWitness(index)}
-                style={styles.chip}
-              >
-                {witness}
-              </Chip>
+                witness={witness}
+                index={index}
+                onRemove={removeWitness}
+              />
             ))}
           </View>
         </Card.Content>
@@ -335,17 +376,12 @@ const InterventionFormScreen = ({ navigation }) => {
           </Button>
 
           {victims.map((victim, index) => (
-            <View key={index} style={styles.victimItem}>
-              <View style={styles.victimInfo}>
-                <Text variant="bodyLarge">{victim.name}</Text>
-                {victim.description && (
-                  <Text variant="bodySmall" style={styles.victimDescription}>
-                    {victim.description}
-                  </Text>
-                )}
-              </View>
-              <IconButton icon="delete" onPress={() => removeVictim(index)} />
-            </View>
+            <VictimItem
+              key={index}
+              victim={victim}
+              index={index}
+              onRemove={removeVictim}
+            />
           ))}
         </Card.Content>
       </Card>
