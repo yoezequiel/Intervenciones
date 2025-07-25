@@ -11,11 +11,12 @@ import {
   IconButton
 } from 'react-native-paper';
 import { useDatabase } from '../context/DatabaseContext';
+import { API_KEY } from '@env';
 
 const InterventionDetailScreen = ({ navigation, route }) => {
   const { getIntervention, deleteIntervention, updateIntervention } = useDatabase();
   const [generating, setGenerating] = useState(false);
-  
+
   const intervention = getIntervention(route.params.id);
 
   if (!intervention) {
@@ -57,79 +58,140 @@ const InterventionDetailScreen = ({ navigation, route }) => {
   const generateReport = async () => {
     setGenerating(true);
     try {
-      // Simular llamada a API de IA (Gemini Flash 2.0)
-      const reportData = {
-        intervention: intervention,
-        prompt: `Genera un informe técnico profesional de bomberos basado en los siguientes datos de intervención:
-        
-        Tipo: ${intervention.type}
-        Fecha: ${formatDate(intervention.createdAt)}
-        Ubicación: ${intervention.address}
-        Horarios: Llamado ${intervention.callTime}, Salida ${intervention.departureTime}, Regreso ${intervention.returnTime}
-        
-        Servicios intervinientes:
-        ${intervention.otherServices && intervention.otherServices.length > 0 ? 
-          intervention.otherServices.map(service => `- ${service.type}${service.ids ? ` (${service.ids})` : ''}${service.personnel ? ` - Personal: ${service.personnel}` : ''}`).join('\n        ') : 'Sin servicios registrados'}
-        
-        Personas involucradas:
-        ${intervention.witnesses.length > 0 ? `- Testigos: ${intervention.witnesses.join(', ')}` : ''}
-        ${intervention.victims.length > 0 ? `- Víctimas: ${intervention.victims.map(v => `${v.name}${v.description ? ` (${v.description})` : ''}`).join(', ')}` : ''}
-        
-        Notas de campo: ${intervention.fieldNotes}
-        
-        Genera un informe estructurado con:
-        1. Cronología
-        2. Descripción del evento
-        3. Medios intervinientes
-        4. Apreciación general
-        5. Observaciones finales`
-      };
+      // Preparar datos para Gemini Flash 2.0
+      const servicesText = intervention.otherServices && intervention.otherServices.length > 0
+        ? intervention.otherServices.map(service =>
+          `${service.type}${service.ids ? ` (${service.ids})` : ''}${service.personnel ? ` - Personal: ${service.personnel}` : ''}`
+        ).join(', ')
+        : 'Sin servicios registrados';
 
-      // Por ahora, generar un informe simulado
-      const simulatedReport = `INFORME DE INTERVENCIÓN
+      const witnessesText = intervention.witnesses.length > 0
+        ? intervention.witnesses.join(', ')
+        : 'Sin testigos registrados';
 
-DATOS GENERALES:
-- Tipo de intervención: ${intervention.type}
-- Fecha y hora: ${formatDate(intervention.createdAt)}
-- Ubicación: ${intervention.address}
+      const victimsText = intervention.victims.length > 0
+        ? intervention.victims.map(v => `${v.name}${v.description ? ` (${v.description})` : ''}`).join(', ')
+        : 'Sin víctimas registradas';
 
-CRONOLOGÍA:
-- ${intervention.callTime}: Recepción del llamado de emergencia
-- ${intervention.departureTime}: Salida del cuartel hacia el lugar del siniestro
-- ${intervention.returnTime}: Regreso al cuartel
+      const prompt = `Redacta una nota narrativa profesional de bomberos que cuente lo que sucedió en esta intervención. Escribe un texto corrido, como si fuera una nota en un informe, basándote en estos datos no son necesario informacion sobre la HORA o FECHA, la nota empieza desde el momento de "Al arribar al lugar":
 
-DESCRIPCIÓN DEL EVENTO:
-${intervention.fieldNotes || 'Sin descripción detallada disponible.'}
+TIPO DE INTERVENCIÓN: ${intervention.type}
+UBICACIÓN: ${intervention.address || 'No especificada'}
 
-SERVICIOS INTERVINIENTES:
-${intervention.otherServices && intervention.otherServices.length > 0 ? 
-  intervention.otherServices.map(service => 
-    `- ${service.type}${service.ids ? ` (${service.ids})` : ''}${service.personnel ? ` - Personal: ${service.personnel}` : ''}`
-  ).join('\n') : '- Sin servicios registrados'}
+NOTAS DE CAMPO: ${intervention.fieldNotes || 'Sin notas adicionales'}
+
+SERVICIOS INTERVINIENTES: ${servicesText}
 
 PERSONAS INVOLUCRADAS:
-${intervention.witnesses.length > 0 ? `- Testigos: ${intervention.witnesses.join(', ')}` : '- Sin testigos registrados'}
-${intervention.victims.length > 0 ? `- Víctimas: ${intervention.victims.map(v => `${v.name}${v.description ? ` (${v.description})` : ''}`).join(', ')}` : '- Sin víctimas registradas'}
+- Testigos: ${witnessesText}
+- Víctimas: ${victimsText}
 
-APRECIACIÓN GENERAL:
-La intervención se desarrolló de acuerdo a los protocolos establecidos. Los medios desplegados fueron adecuados para la naturaleza del siniestro.
+Escribe solo un párrafo narrativo que cuente la historia de lo que pasó, incluyendo naturalmente los servicios que participaron y las personas involucradas. Usa un tono profesional pero narrativo, como si estuvieras contando lo que ocurrió en la intervención.`;
+      let aiGeneratedReport = '';
 
-OBSERVACIONES FINALES:
-Se recomienda el seguimiento correspondiente según el tipo de intervención realizada.
+      try {
+        console.log('Generando informe con Gemini Flash 2.0...');
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            }
+          })
+        });
 
----
-Informe generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`;
+        if (!response.ok) {
+          throw new Error(`Error de API: ${response.status} - ${response.statusText}`);
+        }
 
-      await updateIntervention(intervention.id, { report: simulatedReport });
-      
+        const data = await response.json();
+
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+          aiGeneratedReport = data.candidates[0].content.parts[0].text;
+          console.log('Informe generado exitosamente con IA');
+        } else {
+          throw new Error('Respuesta inválida de la API');
+        }
+
+      } catch (apiError) {
+        console.log('Error con API de Gemini, usando generación local:', apiError.message);
+
+        // Fallback: generar un informe narrativo local si la API falla
+        const timeInfo = intervention.callTime ? `el ${formatDate(intervention.createdAt)} a las ${intervention.callTime}` : `el ${formatDate(intervention.createdAt)}`;
+        const locationInfo = intervention.address ? `en ${intervention.address}` : 'en la ubicación reportada';
+
+        aiGeneratedReport += `Se recibió llamado de emergencia ${timeInfo} por ${intervention.type.toLowerCase()} ${locationInfo}. `;
+
+        if (intervention.departureTime) {
+          aiGeneratedReport += `La salida se efectuó a las ${intervention.departureTime}. `;
+        }
+
+        if (intervention.fieldNotes) {
+          aiGeneratedReport += `${intervention.fieldNotes} `;
+        } else {
+          aiGeneratedReport += `La intervención se desarrolló siguiendo los protocolos establecidos para este tipo de emergencia. `;
+        }
+
+        if (intervention.otherServices && intervention.otherServices.length > 0) {
+          const servicesList = intervention.otherServices.map(service => {
+            let serviceDesc = service.type;
+            if (service.ids) serviceDesc += ` (${service.ids})`;
+            if (service.personnel) serviceDesc += ` con personal ${service.personnel}`;
+            return serviceDesc;
+          });
+
+          if (servicesList.length === 1) {
+            aiGeneratedReport += `En la intervención participó ${servicesList[0]}. `;
+          } else {
+            aiGeneratedReport += `En la intervención participaron ${servicesList.slice(0, -1).join(', ')} y ${servicesList[servicesList.length - 1]}. `;
+          }
+        }
+
+        if (intervention.witnesses.length > 0) {
+          if (intervention.witnesses.length === 1) {
+            aiGeneratedReport += `Se registró como testigo a ${intervention.witnesses[0]}. `;
+          } else {
+            aiGeneratedReport += `Se registraron como testigos a ${intervention.witnesses.slice(0, -1).join(', ')} y ${intervention.witnesses[intervention.witnesses.length - 1]}. `;
+          }
+        }
+
+        if (intervention.victims.length > 0) {
+          const victimsList = intervention.victims.map(v => v.description ? `${v.name} (${v.description})` : v.name);
+          if (victimsList.length === 1) {
+            aiGeneratedReport += `Se atendió a ${victimsList[0]}. `;
+          } else {
+            aiGeneratedReport += `Se atendió a ${victimsList.slice(0, -1).join(', ')} y ${victimsList[victimsList.length - 1]}. `;
+          }
+        } else {
+          aiGeneratedReport += `No se registraron víctimas en el incidente. `;
+        }
+
+        if (intervention.returnTime) {
+          aiGeneratedReport += `El regreso al cuartel se efectuó a las ${intervention.returnTime}.`;
+        } else {
+          aiGeneratedReport += `La intervención se completó satisfactoriamente.`;
+        }
+      }
+
+      await updateIntervention(intervention.id, { report: aiGeneratedReport });
+
       if (intervention.id) {
-        navigation.navigate('Report', { 
+        navigation.navigate('Report', {
           interventionId: intervention.id,
-          report: simulatedReport 
+          report: aiGeneratedReport
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo generar el informe. Verifica tu conexión a internet.');
+      Alert.alert('Error', 'No se pudo generar el informe con IA. Verifica tu conexión a internet.');
     } finally {
       setGenerating(false);
     }
@@ -194,7 +256,7 @@ Informe generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`;
       <Card style={styles.card}>
         <Card.Content>
           <Title>Personas Involucradas</Title>
-          
+
           {intervention.witnesses.length > 0 && (
             <>
               <Text variant="titleSmall" style={styles.sectionTitle}>Testigos</Text>
@@ -205,7 +267,7 @@ Informe generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`;
               </View>
             </>
           )}
-          
+
           {intervention.victims.length > 0 && (
             <>
               <Text variant="titleSmall" style={styles.sectionTitle}>Víctimas</Text>
@@ -246,13 +308,13 @@ Informe generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`;
         >
           {intervention.report ? 'Regenerar Informe' : 'Generar Informe con IA'}
         </Button>
-        
+
         {intervention.report && intervention.id && (
           <Button
             mode="outlined"
-            onPress={() => navigation.navigate('Report', { 
+            onPress={() => navigation.navigate('Report', {
               interventionId: intervention.id,
-              report: intervention.report 
+              report: intervention.report
             })}
             icon="eye"
             style={styles.viewReportButton}

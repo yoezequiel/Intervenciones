@@ -22,7 +22,6 @@ export const DatabaseProvider = ({ children }) => {
   const initDatabase = async () => {
     try {
       const database = await SQLite.openDatabaseAsync('interventions.db');
-      setDb(database);
 
       // Crear tabla definitiva - estructura final
       await database.execAsync(`
@@ -45,9 +44,32 @@ export const DatabaseProvider = ({ children }) => {
         );
       `);
 
-      await refreshInterventions();
+      // Establecer la base de datos después de crear la tabla
+      setDb(database);
+
+      // Cargar intervenciones existentes directamente con la instancia de database
+      await loadInterventions(database);
     } catch (error) {
       console.error('Error initializing database:', error);
+    }
+  };
+
+  const loadInterventions = async (database) => {
+    try {
+      const result = await database.getAllAsync('SELECT * FROM interventions ORDER BY createdAt DESC');
+      const parsedInterventions = result.map((row) => ({
+        ...row,
+        otherServices: row.otherServices && row.otherServices !== 'null' ? JSON.parse(row.otherServices) : [],
+        witnesses: row.witnesses && row.witnesses !== 'null' ? JSON.parse(row.witnesses) : [],
+        victims: row.victims && row.victims !== 'null' ? JSON.parse(row.victims) : [],
+        audioNotes: row.audioNotes && row.audioNotes !== 'null' ? JSON.parse(row.audioNotes) : [],
+        sketches: row.sketches && row.sketches !== 'null' ? JSON.parse(row.sketches) : [],
+      }));
+      setInterventions(parsedInterventions);
+      console.log(`Cargadas ${parsedInterventions.length} intervenciones`);
+    } catch (error) {
+      console.error('Error loading interventions:', error);
+      setInterventions([]); // Asegurar que el estado se inicialice aunque haya error
     }
   };
 
@@ -110,7 +132,7 @@ export const DatabaseProvider = ({ children }) => {
     const values = fields.map(field => {
       const value = updates[field];
       if (field === 'otherServices' || field === 'witnesses' || field === 'victims' ||
-          field === 'audioNotes' || field === 'sketches') {
+        field === 'audioNotes' || field === 'sketches') {
         return JSON.stringify(value);
       }
       return value?.toString() || null;

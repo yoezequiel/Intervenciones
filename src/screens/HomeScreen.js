@@ -19,8 +19,8 @@ const HomeScreen = ({ navigation }) => {
   const [selectedType, setSelectedType] = useState(null);
 
   const filteredInterventions = interventions.filter(intervention => {
-    const matchesSearch = intervention.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         intervention.fieldNotes.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (intervention.address || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (intervention.fieldNotes || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = !selectedType || intervention.type === selectedType;
     return matchesSearch && matchesType;
   });
