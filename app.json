@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Intervenciones Bomberos",
+    "slug": "IntervencionBomberos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#d32f2f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+
+        "NSCameraUsageDescription": "Esta aplicación necesita acceso a la cámara para tomar fotos durante las intervenciones.",
+        "NSPhotoLibraryUsageDescription": "Esta aplicación necesita acceso a la galería para adjuntar fotos a las intervenciones."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#d32f2f"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": []
+  }
+}
