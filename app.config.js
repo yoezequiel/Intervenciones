@@ -1,4 +1,4 @@
-{
+export default {
     "expo": {
         "name": "Intervenciones Bomberos",
         "slug": "IntervencionBomberos",
@@ -37,7 +37,7 @@
             "eas": {
                 "projectId": "fcfd8db0-aca3-451b-b9a9-b658ebde6126"
             },
-            "API_KEY": "process.env.API_KEY"
+            "API_KEY": process.env.API_KEY
         }
     }
-}
+};

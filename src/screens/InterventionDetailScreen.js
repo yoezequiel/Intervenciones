@@ -11,7 +11,7 @@ import {
     IconButton,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
-import { API_KEY } from "../config/env";
+import { API_KEY } from "../../env";
 
 const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention } =
