@@ -1,30 +1,47 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import * as SQLite from 'expo-sqlite';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import * as SQLite from "expo-sqlite";
+import * as FileSystem from "expo-file-system";
 
 const DatabaseContext = createContext(undefined);
 
 export const useDatabase = () => {
-  const context = useContext(DatabaseContext);
-  if (!context) {
-    throw new Error('useDatabase must be used within a DatabaseProvider');
-  }
-  return context;
+    const context = useContext(DatabaseContext);
+    if (!context) {
+        throw new Error("useDatabase must be used within a DatabaseProvider");
+    }
+    return context;
 };
 
 export const DatabaseProvider = ({ children }) => {
-  const [interventions, setInterventions] = useState([]);
-  const [db, setDb] = useState(null);
+    const [interventions, setInterventions] = useState([]);
+    const [db, setDb] = useState(null);
+    const [isDbReady, setIsDbReady] = useState(false);
+    const [error, setError] = useState(null);
 
-  useEffect(() => {
-    initDatabase();
-  }, []);
+    const ensureDirExists = async () => {
+        const dirInfo = await FileSystem.getInfoAsync(
+            FileSystem.documentDirectory + "SQLite"
+        );
+        if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(
+                FileSystem.documentDirectory + "SQLite",
+                { intermediates: true }
+            );
+        }
+    };
 
-  const initDatabase = async () => {
-    try {
-      const database = await SQLite.openDatabaseAsync('interventions.db');
+    const initDatabase = async () => {
+        try {
+            await ensureDirExists();
 
-      // Crear tabla definitiva - estructura final
-      await database.execAsync(`
+            const database = await SQLite.openDatabaseAsync("interventions.db");
+
+            if (__DEV__) {
+                await database.execAsync("PRAGMA foreign_keys = ON;");
+                console.log("SQLite database opened successfully");
+            }
+
+            await database.execAsync(`
         CREATE TABLE IF NOT EXISTS interventions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           callTime TEXT,
@@ -44,137 +61,181 @@ export const DatabaseProvider = ({ children }) => {
         );
       `);
 
-      // Establecer la base de datos después de crear la tabla
-      setDb(database);
+            setDb(database);
+            await loadInterventions(database);
+            setIsDbReady(true);
+        } catch (err) {
+            console.error("Error initializing database:", err);
+            setError(err);
+            setIsDbReady(false);
+            if (__DEV__) {
+                await FileSystem.deleteAsync(
+                    FileSystem.documentDirectory + "SQLite/interventions.db"
+                );
+                await initDatabase();
+            }
+        }
+    };
 
-      // Cargar intervenciones existentes directamente con la instancia de database
-      await loadInterventions(database);
-    } catch (error) {
-      console.error('Error initializing database:', error);
-    }
-  };
+    useEffect(() => {
+        initDatabase();
 
-  const loadInterventions = async (database) => {
-    try {
-      const result = await database.getAllAsync('SELECT * FROM interventions ORDER BY createdAt DESC');
-      const parsedInterventions = result.map((row) => ({
-        ...row,
-        otherServices: row.otherServices && row.otherServices !== 'null' ? JSON.parse(row.otherServices) : [],
-        witnesses: row.witnesses && row.witnesses !== 'null' ? JSON.parse(row.witnesses) : [],
-        victims: row.victims && row.victims !== 'null' ? JSON.parse(row.victims) : [],
-        audioNotes: row.audioNotes && row.audioNotes !== 'null' ? JSON.parse(row.audioNotes) : [],
-        sketches: row.sketches && row.sketches !== 'null' ? JSON.parse(row.sketches) : [],
-      }));
-      setInterventions(parsedInterventions);
-      console.log(`Cargadas ${parsedInterventions.length} intervenciones`);
-    } catch (error) {
-      console.error('Error loading interventions:', error);
-      setInterventions([]); // Asegurar que el estado se inicialice aunque haya error
-    }
-  };
+        return () => {
+            if (db) {
+                db.closeAsync().catch(console.error);
+            }
+        };
+    }, []);
 
-  const refreshInterventions = async () => {
-    if (!db) return;
+    const loadInterventions = async (database) => {
+        if (!database) return;
 
-    try {
-      const result = await db.getAllAsync('SELECT * FROM interventions ORDER BY createdAt DESC');
-      const parsedInterventions = result.map((row) => ({
-        ...row,
-        otherServices: row.otherServices && row.otherServices !== 'null' ? JSON.parse(row.otherServices) : [],
-        witnesses: row.witnesses && row.witnesses !== 'null' ? JSON.parse(row.witnesses) : [],
-        victims: row.victims && row.victims !== 'null' ? JSON.parse(row.victims) : [],
-        audioNotes: row.audioNotes && row.audioNotes !== 'null' ? JSON.parse(row.audioNotes) : [],
-        sketches: row.sketches && row.sketches !== 'null' ? JSON.parse(row.sketches) : [],
-      }));
-      setInterventions(parsedInterventions);
-    } catch (error) {
-      console.error('Error fetching interventions:', error);
-    }
-  };
+        try {
+            const result = await database.getAllAsync(
+                "SELECT * FROM interventions ORDER BY createdAt DESC"
+            );
+            const parsedInterventions = result.map((row) => ({
+                ...row,
+                otherServices: safeJsonParse(row.otherServices, []),
+                witnesses: safeJsonParse(row.witnesses, []),
+                victims: safeJsonParse(row.victims, []),
+                audioNotes: safeJsonParse(row.audioNotes, []),
+                sketches: safeJsonParse(row.sketches, []),
+            }));
+            setInterventions(parsedInterventions);
+        } catch (err) {
+            console.error("Error loading interventions:", err);
+            setInterventions([]);
+            throw err;
+        }
+    };
 
-  const addIntervention = async (intervention) => {
-    if (!db) return;
+    const safeJsonParse = (str, defaultValue = []) => {
+        try {
+            if (!str || str === "null" || str === "undefined")
+                return defaultValue;
+            return JSON.parse(str);
+        } catch (e) {
+            console.warn("Error parsing JSON:", e);
+            return defaultValue;
+        }
+    };
 
-    const now = new Date().toISOString();
-    try {
-      await db.runAsync(
-        `INSERT INTO interventions (
+    const refreshInterventions = async () => {
+        if (!db) return;
+
+        try {
+            const result = await db.getAllAsync(
+                "SELECT * FROM interventions ORDER BY createdAt DESC"
+            );
+            const parsedInterventions = result.map((row) => ({
+                ...row,
+                otherServices: safeJsonParse(row.otherServices, []),
+                witnesses: safeJsonParse(row.witnesses, []),
+                victims: safeJsonParse(row.victims, []),
+                audioNotes: safeJsonParse(row.audioNotes, []),
+                sketches: safeJsonParse(row.sketches, []),
+            }));
+            setInterventions(parsedInterventions);
+        } catch (error) {
+            console.error("Error fetching interventions:", error);
+        }
+    };
+
+    const addIntervention = async (intervention) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
+
+        const now = new Date().toISOString();
+        try {
+            await db.runAsync(
+                `INSERT INTO interventions (
           callTime, departureTime, returnTime, address, type,
           otherServices, witnesses, victims, fieldNotes,
           audioNotes, sketches, createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        intervention.callTime || null,
-        intervention.departureTime || null,
-        intervention.returnTime || null,
-        intervention.address || null,
-        intervention.type || null,
-        JSON.stringify(intervention.otherServices || []),
-        JSON.stringify(intervention.witnesses || []),
-        JSON.stringify(intervention.victims || []),
-        intervention.fieldNotes || null,
-        JSON.stringify(intervention.audioNotes || []),
-        JSON.stringify(intervention.sketches || []),
-        now,
-        now
-      );
-      await refreshInterventions();
-    } catch (error) {
-      console.error('Error adding intervention:', error);
-    }
-  };
+                intervention.callTime || null,
+                intervention.departureTime || null,
+                intervention.returnTime || null,
+                intervention.address || null,
+                intervention.type || null,
+                JSON.stringify(intervention.otherServices || []),
+                JSON.stringify(intervention.witnesses || []),
+                JSON.stringify(intervention.victims || []),
+                intervention.fieldNotes || null,
+                JSON.stringify(intervention.audioNotes || []),
+                JSON.stringify(intervention.sketches || []),
+                now,
+                now
+            );
+            await loadInterventions(db);
+        } catch (err) {
+            console.error("Error adding intervention:", err);
+            throw err;
+        }
+    };
 
-  const updateIntervention = async (id, updates) => {
-    if (!db) return;
+    const updateIntervention = async (id, updates) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
 
-    const now = new Date().toISOString();
-    const fields = Object.keys(updates).filter(key => key !== 'id');
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const values = fields.map(field => {
-      const value = updates[field];
-      if (field === 'otherServices' || field === 'witnesses' || field === 'victims' ||
-        field === 'audioNotes' || field === 'sketches') {
-        return JSON.stringify(value);
-      }
-      return value?.toString() || null;
-    });
+        const now = new Date().toISOString();
+        const fields = Object.keys(updates).filter((key) => key !== "id");
+        const setClause = fields.map((field) => `${field} = ?`).join(", ");
+        const values = fields.map((field) => {
+            const value = updates[field];
+            if (
+                field === "otherServices" ||
+                field === "witnesses" ||
+                field === "victims" ||
+                field === "audioNotes" ||
+                field === "sketches"
+            ) {
+                return JSON.stringify(value);
+            }
+            return value?.toString() || null;
+        });
 
-    try {
-      const params = [...values, now, id];
-      await db.runAsync(
-        `UPDATE interventions SET ${setClause}, updatedAt = ? WHERE id = ?`,
-        ...params.map(p => p?.toString() || null)
-      );
-      await refreshInterventions();
-    } catch (error) {
-      console.error('Error updating intervention:', error);
-    }
-  };
+        try {
+            const params = [...values, now, id];
+            await db.runAsync(
+                `UPDATE interventions SET ${setClause}, updatedAt = ? WHERE id = ?`,
+                ...params.map((p) => p?.toString() || null)
+            );
+            await loadInterventions(db);
+        } catch (err) {
+            console.error("Error updating intervention:", err);
+            throw err;
+        }
+    };
 
-  const deleteIntervention = async (id) => {
-    if (!db) return;
+    const deleteIntervention = async (id) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
 
-    try {
-      await db.runAsync('DELETE FROM interventions WHERE id = ?', id);
-      await refreshInterventions();
-    } catch (error) {
-      console.error('Error deleting intervention:', error);
-    }
-  };
+        try {
+            await db.runAsync("DELETE FROM interventions WHERE id = ?", id);
+            await loadInterventions(db);
+        } catch (err) {
+            console.error("Error deleting intervention:", err);
+            throw err;
+        }
+    };
 
-  const getIntervention = (id) => {
-    return interventions.find(intervention => intervention.id === id);
-  };
+    const getIntervention = (id) => {
+        return interventions.find((intervention) => intervention.id === id);
+    };
 
-  return (
-    <DatabaseContext.Provider value={{
-      interventions,
-      addIntervention,
-      updateIntervention,
-      deleteIntervention,
-      getIntervention,
-      refreshInterventions
-    }}>
-      {children}
-    </DatabaseContext.Provider>
-  );
+    return (
+        <DatabaseContext.Provider
+            value={{
+                interventions,
+                isDbReady,
+                error,
+                refreshInterventions,
+                addIntervention,
+                updateIntervention,
+                deleteIntervention,
+                getIntervention,
+            }}>
+            {children}
+        </DatabaseContext.Provider>
+    );
 };
