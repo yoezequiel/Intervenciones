@@ -1,6 +1,6 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Provider as PaperProvider } from "react-native-paper";
 import { StatusBar, LogBox } from "react-native";
 import { DatabaseProvider } from "./src/context/DatabaseContext";
@@ -13,7 +13,7 @@ import ReportScreen from "./src/screens/ReportScreen";
 // Ignorar logs específicos si es necesario
 LogBox.ignoreLogs(["Setting a timer", "AsyncStorage has been extracted"]);
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 // Componente de carga inicial
 function LoadingScreen() {
