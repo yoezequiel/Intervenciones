@@ -78,36 +78,69 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                     : "Sin servicios registrados";
 
             const witnessesText =
-                intervention.witnesses.length > 0
-                    ? intervention.witnesses.join(", ")
+                intervention.witnesses && intervention.witnesses.length > 0
+                    ? intervention.witnesses
+                          .map((w) => {
+                              if (typeof w === "string") return w; // Compatibilidad con datos antiguos
+                              const parts = [];
+                              if (w.name) parts.push(w.name);
+                              if (w.age) parts.push(`${w.age} años`);
+                              if (w.dni) parts.push(`DNI: ${w.dni}`);
+                              if (w.gender) parts.push(w.gender);
+                              if (w.description) parts.push(w.description);
+                              return parts.join(", ");
+                          })
+                          .join("; ")
                     : "Sin testigos registrados";
 
             const victimsText =
-                intervention.victims.length > 0
+                intervention.victims && intervention.victims.length > 0
                     ? intervention.victims
-                          .map(
-                              (v) =>
-                                  `${v.name}${
-                                      v.description ? ` (${v.description})` : ""
-                                  }`
-                          )
-                          .join(", ")
+                          .map((v) => {
+                              if (typeof v === "object" && v.name) {
+                                  const parts = [v.name];
+                                  if (v.age) parts.push(`${v.age} años`);
+                                  if (v.dni) parts.push(`DNI: ${v.dni}`);
+                                  if (v.gender) parts.push(v.gender);
+                                  if (v.description) parts.push(v.description);
+                                  return parts.join(", ");
+                              }
+                              return String(v);
+                          })
+                          .join("; ")
                     : "Sin víctimas registradas";
 
-            const prompt = `Redacta una nota narrativa profesional de bomberos que cuente lo que sucedió en esta intervención. Escribe un texto corrido, como si fuera una nota en un informe, basándote en estos datos no son necesario informacion sobre la HORA o FECHA, la nota empieza desde el momento de "Al arribar al lugar":
+            const prompt = `Redacta una nota de intervención de bomberos en el estilo y formato que usan los bomberos en Argentina. La nota debe ser un párrafo continuo SIN saltos de línea, escrito en minúsculas (excepto nombres propios y DNI), estilo narrativo directo.
 
-TIPO DE INTERVENCIÓN: ${intervention.type}
-UBICACIÓN: ${intervention.address || "No especificada"}
+CARACTERÍSTICAS DEL ESTILO:
+- Comenzar con "al arribar al lugar" o similar
+- Incluir TODOS los datos de personas con formato: "nombre completo dni número" o "nombre completo DNI: número"
+- Mencionar números de móviles policiales o ambulancias si aplica (ej: "móvil 3942", "ambulancia 156")
+- Describir acciones técnicas específicas (desplegar líneas, tramos, uso de herramientas)
+- Usar lenguaje técnico pero con fluidez natural
+- Finalizar con "se retorna a base" o "retorna base"
+- Si hay novedades mencionarlas al final con "Novedad:" o "sin novedades"
+- Escribir de forma continua, sin viñetas ni listas
 
-NOTAS DE CAMPO: ${intervention.fieldNotes || "Sin notas adicionales"}
+DATOS DE LA INTERVENCIÓN:
+Tipo: ${intervention.type}
+Ubicación: ${intervention.address || "no especificada"}
+Descripción: ${intervention.fieldNotes || "sin detalles adicionales"}
 
-SERVICIOS INTERVINIENTES: ${servicesText}
+Servicios presentes: ${servicesText}
 
-PERSONAS INVOLUCRADAS:
-- Testigos: ${witnessesText}
-- Víctimas: ${victimsText}
+Testigos: ${witnessesText}
 
-Escribe solo un párrafo narrativo que cuente la historia de lo que pasó, incluyendo naturalmente los servicios que participaron y las personas involucradas. Usa un tono profesional pero narrativo, como si estuvieras contando lo que ocurrió en la intervención.`;
+Víctimas: ${victimsText}
+
+IMPORTANTE: 
+- Integra TODOS los nombres y DNI en el texto de forma natural
+- NO uses formato de lista ni viñetas
+- NO uses mayúsculas excesivas
+- Usa el estilo narrativo informal pero técnico de los bomberos argentinos
+- Sé específico con las acciones realizadas según el tipo de intervención
+
+Redacta la nota:`;
             let aiGeneratedReport = "";
 
             try {
@@ -353,48 +386,111 @@ Escribe solo un párrafo narrativo que cuente la historia de lo que pasó, inclu
                 <Card.Content>
                     <Title>Personas Involucradas</Title>
 
-                    {intervention.witnesses.length > 0 && (
-                        <>
-                            <Text
-                                variant="titleSmall"
-                                style={styles.sectionTitle}>
-                                Testigos
-                            </Text>
-                            <View style={styles.chipContainer}>
+                    {intervention.witnesses &&
+                        intervention.witnesses.length > 0 && (
+                            <>
+                                <Text
+                                    variant="titleSmall"
+                                    style={styles.sectionTitle}>
+                                    Testigos
+                                </Text>
                                 {intervention.witnesses.map(
-                                    (witness, index) => (
-                                        <Chip key={index} style={styles.chip}>
-                                            {witness}
-                                        </Chip>
-                                    )
+                                    (witness, index) => {
+                                        // Compatibilidad con formato antiguo (string)
+                                        if (typeof witness === "string") {
+                                            return (
+                                                <Chip
+                                                    key={index}
+                                                    style={styles.chip}>
+                                                    {witness}
+                                                </Chip>
+                                            );
+                                        }
+                                        // Nuevo formato (objeto)
+                                        return (
+                                            <View
+                                                key={index}
+                                                style={styles.personCard}>
+                                                <Text
+                                                    variant="bodyLarge"
+                                                    style={styles.personName}>
+                                                    {witness.name ||
+                                                        "Sin nombre"}
+                                                </Text>
+                                                {witness.age && (
+                                                    <Text variant="bodySmall">
+                                                        Edad: {witness.age}
+                                                    </Text>
+                                                )}
+                                                {witness.dni && (
+                                                    <Text variant="bodySmall">
+                                                        DNI: {witness.dni}
+                                                    </Text>
+                                                )}
+                                                {witness.gender && (
+                                                    <Text variant="bodySmall">
+                                                        Género: {witness.gender}
+                                                    </Text>
+                                                )}
+                                                {witness.description && (
+                                                    <Text
+                                                        variant="bodySmall"
+                                                        style={
+                                                            styles.personDescription
+                                                        }>
+                                                        {witness.description}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                        );
+                                    }
                                 )}
-                            </View>
-                        </>
-                    )}
+                            </>
+                        )}
 
-                    {intervention.victims.length > 0 && (
-                        <>
-                            <Text
-                                variant="titleSmall"
-                                style={styles.sectionTitle}>
-                                Víctimas
-                            </Text>
-                            {intervention.victims.map((victim, index) => (
-                                <View key={index} style={styles.victimItem}>
-                                    <Text variant="bodyMedium">
-                                        {victim.name}
-                                    </Text>
-                                    {victim.description && (
+                    {intervention.victims &&
+                        intervention.victims.length > 0 && (
+                            <>
+                                <Text
+                                    variant="titleSmall"
+                                    style={styles.sectionTitle}>
+                                    Víctimas
+                                </Text>
+                                {intervention.victims.map((victim, index) => (
+                                    <View key={index} style={styles.personCard}>
                                         <Text
-                                            variant="bodySmall"
-                                            style={styles.victimDescription}>
-                                            {victim.description}
+                                            variant="bodyLarge"
+                                            style={styles.personName}>
+                                            {victim.name || "Sin nombre"}
                                         </Text>
-                                    )}
-                                </View>
-                            ))}
-                        </>
-                    )}
+                                        {victim.age && (
+                                            <Text variant="bodySmall">
+                                                Edad: {victim.age}
+                                            </Text>
+                                        )}
+                                        {victim.dni && (
+                                            <Text variant="bodySmall">
+                                                DNI: {victim.dni}
+                                            </Text>
+                                        )}
+                                        {victim.gender && (
+                                            <Text variant="bodySmall">
+                                                Género: {victim.gender}
+                                            </Text>
+                                        )}
+                                        {victim.description && (
+                                            <Text
+                                                variant="bodySmall"
+                                                style={
+                                                    styles.personDescription
+                                                }>
+                                                {victim.description}
+                                            </Text>
+                                        )}
+                                    </View>
+                                ))}
+                            </>
+                        )}
                 </Card.Content>
             </Card>
 
@@ -481,6 +577,21 @@ const styles = StyleSheet.create({
     },
     chip: {
         margin: 2,
+    },
+    personCard: {
+        backgroundColor: "#f0f0f0",
+        padding: 12,
+        marginTop: 8,
+        borderRadius: 8,
+    },
+    personName: {
+        fontWeight: "bold",
+        marginBottom: 4,
+    },
+    personDescription: {
+        color: "#666",
+        marginTop: 4,
+        fontStyle: "italic",
     },
     victimItem: {
         backgroundColor: "#f0f0f0",
