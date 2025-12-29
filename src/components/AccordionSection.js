@@ -24,6 +24,7 @@ const styles = StyleSheet.create({
     card: {
         margin: 16,
         marginBottom: 8,
+        backgroundColor: "#FFFFFF",
     },
     header: {
         flexDirection: "row",

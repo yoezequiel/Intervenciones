@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Provider as PaperProvider } from "react-native-paper";
 import { StatusBar, LogBox } from "react-native";
 import { DatabaseProvider } from "./src/context/DatabaseContext";
+import { firefighterTheme } from "./src/theme";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 import HomeScreen from "./src/screens/HomeScreen";
 import InterventionFormScreen from "./src/screens/InterventionFormScreen";
@@ -86,11 +87,11 @@ function AppContent() {
 export default function App() {
     return (
         <ErrorBoundary>
-            <PaperProvider>
+            <PaperProvider theme={firefighterTheme}>
                 <DatabaseProvider>
                     <StatusBar
-                        barStyle="dark-content"
-                        backgroundColor="#ffffff"
+                        barStyle="light-content"
+                        backgroundColor="#b71c1c"
                     />
                     <AppContent />
                 </DatabaseProvider>

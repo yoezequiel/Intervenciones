@@ -1,6 +1,14 @@
 <resources>
+  <!-- Colores tema bomberil -->
   <color name="splashscreen_background">#d32f2f</color>
   <color name="iconBackground">#d32f2f</color>
-  <color name="colorPrimary">#023c69</color>
-  <color name="colorPrimaryDark">#d32f2f</color>
+  <color name="colorPrimary">#d32f2f</color>
+  <color name="colorPrimaryDark">#b71c1c</color>
+  <color name="colorAccent">#FFC107</color>
+  <color name="firefighterRed">#d32f2f</color>
+  <color name="firefighterRedDark">#b71c1c</color>
+  <color name="firefighterYellow">#FFC107</color>
+  <color name="firefighterBlack">#212121</color>
+  <color name="backgroundLight">#FFFFFF</color>
+  <color name="cardBackground">#FFFFFF</color>
 </resources>

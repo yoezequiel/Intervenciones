@@ -538,11 +538,12 @@ Redacta la nota:`;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#FFFFFF",
     },
     card: {
         margin: 16,
         marginBottom: 8,
+        backgroundColor: "#FFFFFF",
     },
     header: {
         flexDirection: "row",
