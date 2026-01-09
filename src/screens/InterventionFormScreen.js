@@ -1,5 +1,12 @@
 import React, { useState, useCallback, useMemo, memo } from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import {
+    View,
+    StyleSheet,
+    ScrollView,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+} from "react-native";
 import {
     TextInput,
     Button,
@@ -291,281 +298,303 @@ const InterventionFormScreen = ({ navigation }) => {
     ]);
 
     return (
-        <ScrollView style={styles.container}>
-            <AccordionSection title="Datos Cronológicos" defaultExpanded={true}>
-                <TimeButton
-                    label="Hora del llamado"
-                    value={callTime}
-                    onChangeText={setCallTime}
-                    getCurrentTime={getCurrentTime}
-                />
-                <TimeButton
-                    label="Hora de salida"
-                    value={departureTime}
-                    onChangeText={setDepartureTime}
-                    getCurrentTime={getCurrentTime}
-                />
-                <TimeButton
-                    label="Hora de regreso"
-                    value={returnTime}
-                    onChangeText={setReturnTime}
-                    getCurrentTime={getCurrentTime}
-                />
-            </AccordionSection>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollViewContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}>
+                <AccordionSection
+                    title="Datos Cronológicos"
+                    defaultExpanded={true}>
+                    <TimeButton
+                        label="Hora del llamado"
+                        value={callTime}
+                        onChangeText={setCallTime}
+                        getCurrentTime={getCurrentTime}
+                    />
+                    <TimeButton
+                        label="Hora de salida"
+                        value={departureTime}
+                        onChangeText={setDepartureTime}
+                        getCurrentTime={getCurrentTime}
+                    />
+                    <TimeButton
+                        label="Hora de regreso"
+                        value={returnTime}
+                        onChangeText={setReturnTime}
+                        getCurrentTime={getCurrentTime}
+                    />
+                </AccordionSection>
 
-            <AccordionSection title="Ubicación" defaultExpanded={true}>
-                <TextInput
-                    label="Dirección o punto de referencia"
-                    value={address}
-                    onChangeText={setAddress}
-                    mode="outlined"
-                    multiline
-                    style={styles.input}
-                />
-            </AccordionSection>
-
-            <AccordionSection
-                title="Tipo de Intervención"
-                defaultExpanded={true}>
-                <View style={styles.typeContainer}>
-                    {typeOptions.map((option) => (
-                        <TypeChip
-                            key={option.value}
-                            option={option}
-                            isSelected={type === option.value}
-                            onPress={() => setType(option.value)}
-                        />
-                    ))}
-                </View>
-            </AccordionSection>
-
-            <AccordionSection title="Otros Servicios">
-                <View style={styles.serviceForm}>
-                    <Menu
-                        visible={serviceMenuVisible}
-                        onDismiss={() => setServiceMenuVisible(false)}
-                        anchor={
-                            <Button
-                                mode="outlined"
-                                onPress={() => setServiceMenuVisible(true)}
-                                style={styles.serviceTypeButton}>
-                                {newServiceType}
-                            </Button>
-                        }>
-                        {serviceTypes.map((serviceType) => (
-                            <Menu.Item
-                                key={serviceType}
-                                onPress={() => {
-                                    setNewServiceType(serviceType);
-                                    setServiceMenuVisible(false);
-                                }}
-                                title={serviceType}
-                            />
-                        ))}
-                    </Menu>
-
+                <AccordionSection title="Ubicación" defaultExpanded={true}>
                     <TextInput
-                        label="Identificador de móviles"
-                        value={newServiceIds}
-                        onChangeText={setNewServiceIds}
+                        label="Dirección o punto de referencia"
+                        value={address}
+                        onChangeText={setAddress}
                         mode="outlined"
+                        multiline
                         style={styles.input}
                     />
-                    <TextInput
-                        label="Personal a cargo"
-                        value={newServicePersonnel}
-                        onChangeText={setNewServicePersonnel}
-                        mode="outlined"
-                        style={styles.input}
-                    />
+                </AccordionSection>
 
-                    <Button mode="outlined" onPress={addService} icon="plus">
-                        Agregar Servicio
-                    </Button>
-                </View>
-
-                {otherServices.length > 0 && (
-                    <View style={styles.servicesContainer}>
-                        <Divider style={styles.divider} />
-                        <Text variant="titleSmall" style={styles.servicesTitle}>
-                            Servicios Agregados:
-                        </Text>
-                        {otherServices.map((service, index) => (
-                            <ServiceItem
-                                key={index}
-                                service={service}
-                                index={index}
-                                onRemove={removeService}
+                <AccordionSection
+                    title="Tipo de Intervención"
+                    defaultExpanded={true}>
+                    <View style={styles.typeContainer}>
+                        {typeOptions.map((option) => (
+                            <TypeChip
+                                key={option.value}
+                                option={option}
+                                isSelected={type === option.value}
+                                onPress={() => setType(option.value)}
                             />
                         ))}
                     </View>
-                )}
-            </AccordionSection>
+                </AccordionSection>
 
-            <AccordionSection title="Testigos">
-                <TextInput
-                    label="Nombre"
-                    value={newWitness.name}
-                    onChangeText={(text) =>
-                        setNewWitness((prev) => ({ ...prev, name: text }))
-                    }
-                    mode="outlined"
-                    style={styles.input}
-                />
-                <TextInput
-                    label="Edad (opcional)"
-                    value={newWitness.age}
-                    onChangeText={(text) =>
-                        setNewWitness((prev) => ({ ...prev, age: text }))
-                    }
-                    mode="outlined"
-                    keyboardType="numeric"
-                    style={styles.input}
-                />
-                <TextInput
-                    label="DNI (opcional)"
-                    value={newWitness.dni}
-                    onChangeText={(text) =>
-                        setNewWitness((prev) => ({ ...prev, dni: text }))
-                    }
-                    mode="outlined"
-                    keyboardType="numeric"
-                    style={styles.input}
-                />
+                <AccordionSection title="Otros Servicios">
+                    <View style={styles.serviceForm}>
+                        <Menu
+                            visible={serviceMenuVisible}
+                            onDismiss={() => setServiceMenuVisible(false)}
+                            anchor={
+                                <Button
+                                    mode="outlined"
+                                    onPress={() => setServiceMenuVisible(true)}
+                                    style={styles.serviceTypeButton}>
+                                    {newServiceType}
+                                </Button>
+                            }>
+                            {serviceTypes.map((serviceType) => (
+                                <Menu.Item
+                                    key={serviceType}
+                                    onPress={() => {
+                                        setNewServiceType(serviceType);
+                                        setServiceMenuVisible(false);
+                                    }}
+                                    title={serviceType}
+                                />
+                            ))}
+                        </Menu>
 
-                <Text variant="labelLarge" style={styles.label}>
-                    Género (opcional)
-                </Text>
-                <SegmentedButtons
-                    value={newWitness.gender}
-                    onValueChange={(value) =>
-                        setNewWitness((prev) => ({ ...prev, gender: value }))
-                    }
-                    buttons={genderOptions}
-                    style={styles.input}
-                />
+                        <TextInput
+                            label="Identificador de móviles"
+                            value={newServiceIds}
+                            onChangeText={setNewServiceIds}
+                            mode="outlined"
+                            style={styles.input}
+                        />
+                        <TextInput
+                            label="Personal a cargo"
+                            value={newServicePersonnel}
+                            onChangeText={setNewServicePersonnel}
+                            mode="outlined"
+                            style={styles.input}
+                        />
 
-                <TextInput
-                    label="Descripción (opcional)"
-                    value={newWitness.description}
-                    onChangeText={(text) =>
-                        setNewWitness((prev) => ({
-                            ...prev,
-                            description: text,
-                        }))
-                    }
-                    mode="outlined"
-                    multiline
-                    numberOfLines={3}
-                    style={styles.input}
-                />
+                        <Button
+                            mode="outlined"
+                            onPress={addService}
+                            icon="plus">
+                            Agregar Servicio
+                        </Button>
+                    </View>
 
-                <Button mode="outlined" onPress={addWitness} icon="plus">
-                    Agregar Testigo
-                </Button>
+                    {otherServices.length > 0 && (
+                        <View style={styles.servicesContainer}>
+                            <Divider style={styles.divider} />
+                            <Text
+                                variant="titleSmall"
+                                style={styles.servicesTitle}>
+                                Servicios Agregados:
+                            </Text>
+                            {otherServices.map((service, index) => (
+                                <ServiceItem
+                                    key={index}
+                                    service={service}
+                                    index={index}
+                                    onRemove={removeService}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </AccordionSection>
 
-                {witnesses.map((witness, index) => (
-                    <WitnessItem
-                        key={index}
-                        witness={witness}
-                        index={index}
-                        onRemove={removeWitness}
+                <AccordionSection title="Testigos">
+                    <TextInput
+                        label="Nombre"
+                        value={newWitness.name}
+                        onChangeText={(text) =>
+                            setNewWitness((prev) => ({ ...prev, name: text }))
+                        }
+                        mode="outlined"
+                        style={styles.input}
                     />
-                ))}
-            </AccordionSection>
-
-            <AccordionSection title="Víctimas">
-                <TextInput
-                    label="Nombre"
-                    value={newVictim.name}
-                    onChangeText={(text) =>
-                        setNewVictim((prev) => ({ ...prev, name: text }))
-                    }
-                    mode="outlined"
-                    style={styles.input}
-                />
-                <TextInput
-                    label="Edad (opcional)"
-                    value={newVictim.age}
-                    onChangeText={(text) =>
-                        setNewVictim((prev) => ({ ...prev, age: text }))
-                    }
-                    mode="outlined"
-                    keyboardType="numeric"
-                    style={styles.input}
-                />
-                <TextInput
-                    label="DNI (opcional)"
-                    value={newVictim.dni}
-                    onChangeText={(text) =>
-                        setNewVictim((prev) => ({ ...prev, dni: text }))
-                    }
-                    mode="outlined"
-                    keyboardType="numeric"
-                    style={styles.input}
-                />
-
-                <Text variant="labelLarge" style={styles.label}>
-                    Género (opcional)
-                </Text>
-                <SegmentedButtons
-                    value={newVictim.gender}
-                    onValueChange={(value) =>
-                        setNewVictim((prev) => ({ ...prev, gender: value }))
-                    }
-                    buttons={genderOptions}
-                    style={styles.input}
-                />
-
-                <TextInput
-                    label="Descripción (lesiones, estado, etc.)"
-                    value={newVictim.description}
-                    onChangeText={(text) =>
-                        setNewVictim((prev) => ({ ...prev, description: text }))
-                    }
-                    mode="outlined"
-                    multiline
-                    numberOfLines={3}
-                    style={styles.input}
-                />
-
-                <Button mode="outlined" onPress={addVictim} icon="plus">
-                    Agregar Víctima
-                </Button>
-
-                {victims.map((victim, index) => (
-                    <VictimItem
-                        key={index}
-                        victim={victim}
-                        index={index}
-                        onRemove={removeVictim}
+                    <TextInput
+                        label="Edad (opcional)"
+                        value={newWitness.age}
+                        onChangeText={(text) =>
+                            setNewWitness((prev) => ({ ...prev, age: text }))
+                        }
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={styles.input}
                     />
-                ))}
-            </AccordionSection>
+                    <TextInput
+                        label="DNI (opcional)"
+                        value={newWitness.dni}
+                        onChangeText={(text) =>
+                            setNewWitness((prev) => ({ ...prev, dni: text }))
+                        }
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={styles.input}
+                    />
 
-            <AccordionSection title="Notas de Campo">
-                <TextInput
-                    label="Descripción de lo sucedido"
-                    value={fieldNotes}
-                    onChangeText={setFieldNotes}
-                    mode="outlined"
-                    multiline
-                    numberOfLines={6}
-                    style={styles.input}
-                />
-            </AccordionSection>
+                    <Text variant="labelLarge" style={styles.label}>
+                        Género (opcional)
+                    </Text>
+                    <SegmentedButtons
+                        value={newWitness.gender}
+                        onValueChange={(value) =>
+                            setNewWitness((prev) => ({
+                                ...prev,
+                                gender: value,
+                            }))
+                        }
+                        buttons={genderOptions}
+                        style={styles.input}
+                    />
 
-            <View style={styles.buttonContainer}>
-                <Button
-                    mode="contained"
-                    onPress={handleSubmit}
-                    loading={loading}
-                    disabled={loading}
-                    style={styles.submitButton}>
-                    Guardar Intervención
-                </Button>
-            </View>
-        </ScrollView>
+                    <TextInput
+                        label="Descripción (opcional)"
+                        value={newWitness.description}
+                        onChangeText={(text) =>
+                            setNewWitness((prev) => ({
+                                ...prev,
+                                description: text,
+                            }))
+                        }
+                        mode="outlined"
+                        multiline
+                        numberOfLines={3}
+                        style={styles.input}
+                    />
+
+                    <Button mode="outlined" onPress={addWitness} icon="plus">
+                        Agregar Testigo
+                    </Button>
+
+                    {witnesses.map((witness, index) => (
+                        <WitnessItem
+                            key={index}
+                            witness={witness}
+                            index={index}
+                            onRemove={removeWitness}
+                        />
+                    ))}
+                </AccordionSection>
+
+                <AccordionSection title="Víctimas">
+                    <TextInput
+                        label="Nombre"
+                        value={newVictim.name}
+                        onChangeText={(text) =>
+                            setNewVictim((prev) => ({ ...prev, name: text }))
+                        }
+                        mode="outlined"
+                        style={styles.input}
+                    />
+                    <TextInput
+                        label="Edad (opcional)"
+                        value={newVictim.age}
+                        onChangeText={(text) =>
+                            setNewVictim((prev) => ({ ...prev, age: text }))
+                        }
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={styles.input}
+                    />
+                    <TextInput
+                        label="DNI (opcional)"
+                        value={newVictim.dni}
+                        onChangeText={(text) =>
+                            setNewVictim((prev) => ({ ...prev, dni: text }))
+                        }
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={styles.input}
+                    />
+
+                    <Text variant="labelLarge" style={styles.label}>
+                        Género (opcional)
+                    </Text>
+                    <SegmentedButtons
+                        value={newVictim.gender}
+                        onValueChange={(value) =>
+                            setNewVictim((prev) => ({ ...prev, gender: value }))
+                        }
+                        buttons={genderOptions}
+                        style={styles.input}
+                    />
+
+                    <TextInput
+                        label="Descripción (lesiones, estado, etc.)"
+                        value={newVictim.description}
+                        onChangeText={(text) =>
+                            setNewVictim((prev) => ({
+                                ...prev,
+                                description: text,
+                            }))
+                        }
+                        mode="outlined"
+                        multiline
+                        numberOfLines={3}
+                        style={styles.input}
+                    />
+
+                    <Button mode="outlined" onPress={addVictim} icon="plus">
+                        Agregar Víctima
+                    </Button>
+
+                    {victims.map((victim, index) => (
+                        <VictimItem
+                            key={index}
+                            victim={victim}
+                            index={index}
+                            onRemove={removeVictim}
+                        />
+                    ))}
+                </AccordionSection>
+
+                <AccordionSection title="Notas de Campo">
+                    <TextInput
+                        label="Descripción de lo sucedido"
+                        value={fieldNotes}
+                        onChangeText={setFieldNotes}
+                        mode="outlined"
+                        multiline
+                        numberOfLines={6}
+                        style={styles.input}
+                    />
+                </AccordionSection>
+
+                <View style={styles.buttonContainer}>
+                    <Button
+                        mode="contained"
+                        onPress={handleSubmit}
+                        loading={loading}
+                        disabled={loading}
+                        style={styles.submitButton}>
+                        Guardar Intervención
+                    </Button>
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -573,6 +602,13 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#FFFFFF",
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        paddingBottom: 20,
     },
     card: {
         margin: 16,
