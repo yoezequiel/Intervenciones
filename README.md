@@ -4,30 +4,33 @@ Una aplicación móvil offline desarrollada con Expo para registrar intervencion
 
 ## 🎯 Características Principales
 
-- ✅ **100% Offline**: Funciona sin conexión a internet
-- 📊 **Base de datos local**: SQLite embebida
-- 🤖 **IA para informes**: Generación automática con Gemini Flash 2.0
-- 📍 **GPS integrado**: Captura de coordenadas automática
-- 📷 **Multimedia**: Soporte para fotos y notas de voz
-- 📄 **Exportación PDF**: Informes listos para compartir
-- 🔒 **Sin autenticación**: Acceso directo sin contraseñas
+-   ✅ **100% Offline**: Funciona sin conexión a internet
+-   📊 **Base de datos local**: SQLite embebida
+-   🤖 **IA para informes**: Generación automática con Gemini 3 Flash
+-   📍 **GPS integrado**: Captura de coordenadas automática
+-   📷 **Multimedia**: Soporte para fotos y notas de voz
+-   📄 **Exportación PDF**: Informes listos para compartir
+-   🔒 **Sin autenticación**: Acceso directo sin contraseñas
 
 ## 🚀 Instalación y Configuración
 
 ### Prerrequisitos
-- Node.js (versión 18 o superior)
-- Expo CLI
-- Android Studio (para Android) o Xcode (para iOS)
+
+-   Node.js (versión 18 o superior)
+-   Expo CLI
+-   Android Studio (para Android) o Xcode (para iOS)
 
 ### Pasos de instalación
 
 1. **Clonar e instalar dependencias:**
+
 ```bash
 cd IntervencionBomberos
 npm install
 ```
 
 2. **Ejecutar la aplicación:**
+
 ```bash
 # Para desarrollo
 npm start
@@ -45,59 +48,68 @@ npm run web
 ## 📋 Funcionalidades Detalladas
 
 ### 1. Lista de Intervenciones
-- Visualización de todas las intervenciones registradas
-- Filtros por fecha y tipo de intervención
-- Búsqueda por dirección o notas
-- Acceso rápido a detalles
+
+-   Visualización de todas las intervenciones registradas
+-   Filtros por fecha y tipo de intervención
+-   Búsqueda por dirección o notas
+-   Acceso rápido a detalles
 
 ### 2. Formulario de Nueva Intervención
 
 #### Datos Cronológicos
-- Hora del llamado
-- Hora de salida
-- Hora de regreso al cuartel
-- Botones "Ahora" para captura automática
+
+-   Hora del llamado
+-   Hora de salida
+-   Hora de regreso al cuartel
+-   Botones "Ahora" para captura automática
 
 #### Ubicación
-- Dirección o punto de referencia
-- Captura automática de coordenadas GPS
-- Almacenamiento offline de ubicación
+
+-   Dirección o punto de referencia
+-   Captura automática de coordenadas GPS
+-   Almacenamiento offline de ubicación
 
 #### Medios Intervinientes
-- **Bomberos**: Móvil, conductor, jefe de dotación
-- **Policía**: Cantidad de móviles, IDs, personal
-- **Ambulancias**: Cantidad, identificación, personal
-- **Otros servicios**: Grúas, electricidad, gas, etc.
+
+-   **Bomberos**: Móvil, conductor, jefe de dotación
+-   **Policía**: Cantidad de móviles, IDs, personal
+-   **Ambulancias**: Cantidad, identificación, personal
+-   **Otros servicios**: Grúas, electricidad, gas, etc.
 
 #### Personas Involucradas
-- **Testigos**: Lista de nombres
-- **Víctimas**: Nombres y descripciones detalladas
+
+-   **Testigos**: Lista de nombres
+-   **Víctimas**: Nombres y descripciones detalladas
 
 #### Clasificación
-- Incendio estructural
-- Incendio forestal
-- Accidente de tránsito
-- Rescate
-- Alarma falsa
-- Otro
+
+-   Incendio estructural
+-   Incendio forestal
+-   Accidente de tránsito
+-   Rescate
+-   Alarma falsa
+-   Otro
 
 ### 3. Notas de Campo
-- Campo de texto libre para descripción
-- Adjuntar fotos desde galería o cámara
-- Soporte para notas de voz (futuro)
-- Croquis y dibujos (futuro)
+
+-   Campo de texto libre para descripción
+-   Adjuntar fotos desde galería o cámara
+-   Soporte para notas de voz (futuro)
+-   Croquis y dibujos (futuro)
 
 ### 4. Generación de Informes con IA
-- Procesamiento automático de datos estructurados
-- Generación de informe técnico profesional
-- Estructura estándar: cronología, descripción, medios, apreciación
-- Solo requiere internet para generación (datos se mantienen offline)
+
+-   Procesamiento automático de datos estructurados
+-   Generación de informe técnico profesional
+-   Estructura estándar: cronología, descripción, medios, apreciación
+-   Solo requiere internet para generación (datos se mantienen offline)
 
 ### 5. Exportación y Compartir
-- Exportación a PDF con formato profesional
-- Compartir por WhatsApp, email, Drive
-- Copia de texto al portapapeles
-- Almacenamiento local de informes
+
+-   Exportación a PDF con formato profesional
+-   Compartir por WhatsApp, email, Drive
+-   Copia de texto al portapapeles
+-   Almacenamiento local de informes
 
 ## 🗄️ Estructura de la Base de Datos
 
@@ -147,8 +159,9 @@ Para habilitar la generación automática de informes, configura tu API key de G
 ## 📱 Uso de la Aplicación
 
 ### Crear Nueva Intervención
+
 1. Presiona el botón "+" en la pantalla principal
-2. Completa los campos obligatorios (marcados con *)
+2. Completa los campos obligatorios (marcados con \*)
 3. Usa los botones "Ahora" para timestamps automáticos
 4. Captura GPS si está disponible
 5. Agrega testigos y víctimas según corresponda
@@ -157,6 +170,7 @@ Para habilitar la generación automática de informes, configura tu API key de G
 8. Guarda la intervención
 
 ### Generar Informe
+
 1. Abre el detalle de una intervención
 2. Presiona "Generar Informe con IA"
 3. Espera el procesamiento (requiere internet)
@@ -164,31 +178,32 @@ Para habilitar la generación automática de informes, configura tu API key de G
 5. Exporta como PDF o comparte
 
 ### Gestionar Intervenciones
-- Filtra por tipo usando los chips superiores
-- Busca por dirección o contenido
-- Toca una intervención para ver detalles
-- Elimina intervenciones desde el detalle
+
+-   Filtra por tipo usando los chips superiores
+-   Busca por dirección o contenido
+-   Toca una intervención para ver detalles
+-   Elimina intervenciones desde el detalle
 
 ## 🔒 Privacidad y Seguridad
 
-- **Sin autenticación**: Acceso directo sin contraseñas
-- **Datos locales**: Toda la información se almacena en el dispositivo
-- **Sin sincronización**: No hay respaldo automático en la nube
-- **Uso puntual de IA**: Solo se conecta para generar informes
-- **Sin cuentas**: No requiere registro de usuario
+-   **Sin autenticación**: Acceso directo sin contraseñas
+-   **Datos locales**: Toda la información se almacena en el dispositivo
+-   **Sin sincronización**: No hay respaldo automático en la nube
+-   **Uso puntual de IA**: Solo se conecta para generar informes
+-   **Sin cuentas**: No requiere registro de usuario
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Expo**: Framework de desarrollo
-- **React Native**: UI multiplataforma
-- **TypeScript**: Tipado estático
-- **SQLite**: Base de datos local
-- **React Navigation**: Navegación entre pantallas
-- **React Native Paper**: Componentes Material Design
-- **Expo Location**: Servicios de geolocalización
-- **Expo Image Picker**: Captura de fotos
-- **Expo Print**: Generación de PDFs
-- **Expo Sharing**: Compartir archivos
+-   **Expo**: Framework de desarrollo
+-   **React Native**: UI multiplataforma
+-   **TypeScript**: Tipado estático
+-   **SQLite**: Base de datos local
+-   **React Navigation**: Navegación entre pantallas
+-   **React Native Paper**: Componentes Material Design
+-   **Expo Location**: Servicios de geolocalización
+-   **Expo Image Picker**: Captura de fotos
+-   **Expo Print**: Generación de PDFs
+-   **Expo Sharing**: Compartir archivos
 
 ## 📄 Licencia
 

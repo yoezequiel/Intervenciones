@@ -12,6 +12,7 @@ import {
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
 import { API_KEY } from "../../env";
+import { GoogleGenAI } from "@google/genai";
 
 const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention } =
@@ -59,7 +60,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const generateReport = async () => {
         setGenerating(true);
         try {
-            // Preparar datos para Gemini Flash 2.0
+            // Preparar datos para Gemini 3 Flash
             const servicesText =
                 intervention.otherServices &&
                 intervention.otherServices.length > 0
@@ -148,49 +149,25 @@ Redactá SOLO el texto de la nota, nada más:`;
             let aiGeneratedReport = "";
 
             try {
-                console.log("Generando informe con Gemini Flash 2.0...");
-                const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: [{ text: prompt }],
-                                },
-                            ],
-                            generationConfig: {
-                                temperature: 0.7,
-                                topK: 40,
-                                topP: 0.95,
-                                maxOutputTokens: 1024,
-                            },
-                        }),
-                    }
-                );
+                console.log("Generando informe con Gemini 3 Flash...");
 
-                if (!response.ok) {
-                    throw new Error(
-                        `Error de API: ${response.status} - ${response.statusText}`
-                    );
-                }
+                // Inicializar el SDK de Google Gen AI
+                const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-                const data = await response.json();
+                // Generar contenido con gemini-3-flash-preview
+                const response = await ai.models.generateContent({
+                    model: "gemini-3-flash-preview",
+                    contents: prompt,
+                    generationConfig: {
+                        temperature: 0.7,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 1024,
+                    },
+                });
 
-                if (
-                    data.candidates &&
-                    data.candidates[0] &&
-                    data.candidates[0].content
-                ) {
-                    aiGeneratedReport =
-                        data.candidates[0].content.parts[0].text;
-                    console.log("Informe generado exitosamente con IA");
-                } else {
-                    throw new Error("Respuesta inválida de la API");
-                }
+                aiGeneratedReport = response.text;
+                console.log("Informe generado exitosamente con IA");
             } catch (apiError) {
                 console.log(
                     "Error con API de Gemini, usando generación local:",
