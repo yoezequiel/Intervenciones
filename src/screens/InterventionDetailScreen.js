@@ -110,37 +110,42 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                           .join("; ")
                     : "Sin víctimas registradas";
 
-            const prompt = `Redacta una nota de intervención de bomberos en el estilo y formato que usan los bomberos en Argentina. La nota debe ser un párrafo continuo SIN saltos de línea, escrito en minúsculas (excepto nombres propios y DNI), estilo narrativo directo.
+            const prompt = `Sos un bombero profesional redactando una nota de intervención oficial en Argentina. Redactá el informe siguiendo este formato estricto:
 
-CARACTERÍSTICAS DEL ESTILO:
-- Comenzar con "al arribar al lugar" o similar
-- Incluir TODOS los datos de personas con formato: "nombre completo dni número" o "nombre completo DNI: número"
-- Mencionar números de móviles policiales o ambulancias si aplica (ej: "móvil 3942", "ambulancia 156")
-- Describir acciones técnicas específicas (desplegar líneas, tramos, uso de herramientas)
-- Usar lenguaje técnico pero con fluidez natural
-- Finalizar con "se retorna a base" o "retorna base"
-- Si hay novedades mencionarlas al final con "Novedad:" o "sin novedades"
-- Escribir de forma continua, sin viñetas ni listas
+FORMATO OBLIGATORIO:
+- Párrafo continuo narrativo SIN saltos de línea
+- Todo en minúsculas EXCEPTO nombres propios, siglas (DNI) y números de móviles
+- Comenzar SIEMPRE con: "al arribar al lugar se observa..." o "al arribar a la escena..."
+- Incluir OBLIGATORIAMENTE todos los nombres con formato exacto: "nombre apellido dni 12345678" (sin puntos en DNI)
+- Números de móviles: "móvil 3942", "ambulancia 156", etc.
+- Finalizar con "se retorna a base" o variante similar
+- Sin viñetas, listas ni formato estructurado
 
-DATOS DE LA INTERVENCIÓN:
+ESTILO DE REDACCIÓN:
+- Lenguaje técnico bomberil: "desplegar líneas", "tendido de línea", "corte de suministro", "descarceración", "ventilación forzada"
+- Mencionar herramientas específicas cuando corresponda: "motobomba", "autobomba", "escalera", "Holmatro", "canaleta"
+- Narración en tercera persona o pasiva: "se procedió a", "se realizó", "se verificó"
+- Incluir detalles técnicos: cantidad de tramos, diámetros de mangueras, estado de la situación al arribo
+- Si hay personas, SIEMPRE incluir: nombre completo + DNI (formato: nombre apellido dni número sin puntos)
+
+DATOS DE ESTA INTERVENCIÓN:
 Tipo: ${intervention.type}
 Ubicación: ${intervention.address || "no especificada"}
-Descripción: ${intervention.fieldNotes || "sin detalles adicionales"}
-
-Servicios presentes: ${servicesText}
-
+Notas de campo: ${intervention.fieldNotes || "sin detalles adicionales"}
+Servicios: ${servicesText}
 Testigos: ${witnessesText}
-
 Víctimas: ${victimsText}
 
-IMPORTANTE: 
-- Integra TODOS los nombres y DNI en el texto de forma natural
-- NO uses formato de lista ni viñetas
-- NO uses mayúsculas excesivas
-- Usa el estilo narrativo informal pero técnico de los bomberos argentinos
-- Sé específico con las acciones realizadas según el tipo de intervención
+INSTRUCCIONES FINALES:
+1. Comenzá desde el arribo (NO mencionar fecha, hora de llamado ni dirección - eso ya está registrado)
+2. Describí lo observado al arribar
+3. Detallá las acciones técnicas realizadas paso a paso
+4. Mencioná servicios actuantes con números de móvil
+5. Integrá nombres completos + DNI de forma natural en la narrativa
+6. Finalizá con retorno a base
+7. Si hay novedad importante, agregá al final: "novedad: [descripción]" o "sin novedades"
 
-Redacta la nota:`;
+Redactá SOLO el texto de la nota, nada más:`;
             let aiGeneratedReport = "";
 
             try {

@@ -573,7 +573,8 @@ const InterventionFormScreen = ({ navigation }) => {
 
                 <AccordionSection title="Notas de Campo">
                     <TextInput
-                        label="Descripción de lo sucedido"
+                        label="Redacción del hecho"
+                        placeholder="Al arribar a la escena se observó [descripción de la situación encontrada]. Se procedió a [acciones realizadas]. Personal actuante: [quiénes intervinieron y qué hicieron]. Novedades durante la intervención: [cualquier incidente o situación relevante]. Culminada la tarea se retiró el personal."
                         value={fieldNotes}
                         onChangeText={setFieldNotes}
                         mode="outlined"
