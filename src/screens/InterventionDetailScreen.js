@@ -117,7 +117,7 @@ FORMATO OBLIGATORIO:
 - Todo en minúsculas EXCEPTO nombres propios, siglas (DNI) y números de móviles
 - Comenzar SIEMPRE con: "al arribar al lugar se observa..." o "al arribar a la escena..."
 - Incluir OBLIGATORIAMENTE todos los nombres con formato exacto: "nombre apellido dni 12345678" (sin puntos en DNI)
-- Números de móviles: "móvil 3942", "ambulancia 156", etc.
+- Números de móviles: "móvil 3942 a cargo de...", "ambulancia 156 a cargo de...", etc.
 - Finalizar con "se retorna a base" o variante similar
 - Sin viñetas, listas ni formato estructurado
 
@@ -130,7 +130,6 @@ ESTILO DE REDACCIÓN:
 
 DATOS DE ESTA INTERVENCIÓN:
 Tipo: ${intervention.type}
-Ubicación: ${intervention.address || "no especificada"}
 Notas de campo: ${intervention.fieldNotes || "sin detalles adicionales"}
 Servicios: ${servicesText}
 Testigos: ${witnessesText}
