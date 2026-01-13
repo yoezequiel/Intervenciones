@@ -189,16 +189,16 @@ export const DatabaseProvider = ({ children }) => {
                 field === "audioNotes" ||
                 field === "sketches"
             ) {
-                return JSON.stringify(value);
+                return JSON.stringify(value || []);
             }
-            return value?.toString() || null;
+            return value || null;
         });
 
         try {
             const params = [...values, now, id];
             await db.runAsync(
                 `UPDATE interventions SET ${setClause}, updatedAt = ? WHERE id = ?`,
-                ...params.map((p) => p?.toString() || null)
+                ...params
             );
             await loadInterventions(db);
         } catch (err) {

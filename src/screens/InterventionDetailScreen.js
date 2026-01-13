@@ -507,6 +507,18 @@ INSTRUCCIONES FINALES:
             <View style={styles.buttonContainer}>
                 <Button
                     mode="contained"
+                    onPress={() =>
+                        navigation.navigate("InterventionForm", {
+                            interventionId: intervention.id,
+                        })
+                    }
+                    icon="pencil"
+                    style={styles.editButton}>
+                    Editar Intervención
+                </Button>
+
+                <Button
+                    mode="contained"
                     onPress={generateReport}
                     loading={generating}
                     disabled={generating}
@@ -607,6 +619,10 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         padding: 16,
+    },
+    editButton: {
+        backgroundColor: "#1976d2",
+        marginBottom: 8,
     },
     reportButton: {
         backgroundColor: "#d32f2f",

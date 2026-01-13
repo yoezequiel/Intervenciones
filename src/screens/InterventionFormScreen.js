@@ -54,7 +54,7 @@ const TypeChip = memo(({ option, isSelected, onPress }) => (
 ));
 
 // Componente memoizado para servicios
-const ServiceItem = memo(({ service, index, onRemove }) => (
+const ServiceItem = memo(({ service, index, onRemove, onEdit }) => (
     <View style={styles.serviceItem}>
         <View style={styles.serviceInfo}>
             <Text variant="bodyLarge">{service.type}</Text>
@@ -63,12 +63,15 @@ const ServiceItem = memo(({ service, index, onRemove }) => (
                 {service.personnel || "N/A"}
             </Text>
         </View>
-        <IconButton icon="delete" onPress={() => onRemove(index)} />
+        <View style={styles.itemActions}>
+            <IconButton icon="pencil" onPress={() => onEdit(index)} />
+            <IconButton icon="delete" onPress={() => onRemove(index)} />
+        </View>
     </View>
 ));
 
 // Componente memoizado para víctimas
-const VictimItem = memo(({ victim, index, onRemove }) => (
+const VictimItem = memo(({ victim, index, onRemove, onEdit }) => (
     <View style={styles.personItem}>
         <View style={styles.personInfo}>
             <Text variant="bodyLarge">{victim.name || "Sin nombre"}</Text>
@@ -83,12 +86,15 @@ const VictimItem = memo(({ victim, index, onRemove }) => (
                 </Text>
             )}
         </View>
-        <IconButton icon="delete" onPress={() => onRemove(index)} />
+        <View style={styles.itemActions}>
+            <IconButton icon="pencil" onPress={() => onEdit(index)} />
+            <IconButton icon="delete" onPress={() => onRemove(index)} />
+        </View>
     </View>
 ));
 
 // Componente memoizado para testigos
-const WitnessItem = memo(({ witness, index, onRemove }) => (
+const WitnessItem = memo(({ witness, index, onRemove, onEdit }) => (
     <View style={styles.personItem}>
         <View style={styles.personInfo}>
             <Text variant="bodyLarge">{witness.name || "Sin nombre"}</Text>
@@ -105,29 +111,53 @@ const WitnessItem = memo(({ witness, index, onRemove }) => (
                 </Text>
             )}
         </View>
-        <IconButton icon="delete" onPress={() => onRemove(index)} />
+        <View style={styles.itemActions}>
+            <IconButton icon="pencil" onPress={() => onEdit(index)} />
+            <IconButton icon="delete" onPress={() => onRemove(index)} />
+        </View>
     </View>
 ));
 
-const InterventionFormScreen = ({ navigation }) => {
-    const { addIntervention } = useDatabase();
+const InterventionFormScreen = ({ navigation, route }) => {
+    const { addIntervention, updateIntervention, getIntervention } =
+        useDatabase();
+
+    // Detectar si estamos editando
+    const interventionId = route.params?.interventionId;
+    const isEditing = !!interventionId;
+    const existingIntervention = isEditing
+        ? getIntervention(interventionId)
+        : null;
 
     // Estados del formulario
-    const [callTime, setCallTime] = useState("");
-    const [departureTime, setDepartureTime] = useState("");
-    const [returnTime, setReturnTime] = useState("");
-    const [address, setAddress] = useState("");
-    const [type, setType] = useState(InterventionType.OTHER);
+    const [callTime, setCallTime] = useState(
+        existingIntervention?.callTime || ""
+    );
+    const [departureTime, setDepartureTime] = useState(
+        existingIntervention?.departureTime || ""
+    );
+    const [returnTime, setReturnTime] = useState(
+        existingIntervention?.returnTime || ""
+    );
+    const [address, setAddress] = useState(existingIntervention?.address || "");
+    const [type, setType] = useState(
+        existingIntervention?.type || InterventionType.OTHER
+    );
 
     // Otros servicios unificados
-    const [otherServices, setOtherServices] = useState([]);
+    const [otherServices, setOtherServices] = useState(
+        existingIntervention?.otherServices || []
+    );
     const [newServiceType, setNewServiceType] = useState("Policía");
     const [newServiceIds, setNewServiceIds] = useState("");
     const [newServicePersonnel, setNewServicePersonnel] = useState("");
     const [serviceMenuVisible, setServiceMenuVisible] = useState(false);
+    const [editingServiceIndex, setEditingServiceIndex] = useState(null);
 
     // Personas involucradas - Testigos
-    const [witnesses, setWitnesses] = useState([]);
+    const [witnesses, setWitnesses] = useState(
+        existingIntervention?.witnesses || []
+    );
     const [newWitness, setNewWitness] = useState({
         name: "",
         age: "",
@@ -135,9 +165,10 @@ const InterventionFormScreen = ({ navigation }) => {
         gender: "",
         description: "",
     });
+    const [editingWitnessIndex, setEditingWitnessIndex] = useState(null);
 
     // Personas involucradas - Víctimas
-    const [victims, setVictims] = useState([]);
+    const [victims, setVictims] = useState(existingIntervention?.victims || []);
     const [newVictim, setNewVictim] = useState({
         name: "",
         age: "",
@@ -145,9 +176,12 @@ const InterventionFormScreen = ({ navigation }) => {
         gender: "",
         description: "",
     });
+    const [editingVictimIndex, setEditingVictimIndex] = useState(null);
 
     // Notas
-    const [fieldNotes, setFieldNotes] = useState("");
+    const [fieldNotes, setFieldNotes] = useState(
+        existingIntervention?.fieldNotes || ""
+    );
 
     const [loading, setLoading] = useState(false);
 
@@ -196,28 +230,81 @@ const InterventionFormScreen = ({ navigation }) => {
                 ids: newServiceIds || "",
                 personnel: newServicePersonnel || "",
             };
-            setOtherServices((prev) => [...prev, newService]);
+
+            if (editingServiceIndex !== null) {
+                // Editar servicio existente
+                setOtherServices((prev) =>
+                    prev.map((service, index) =>
+                        index === editingServiceIndex ? newService : service
+                    )
+                );
+                setEditingServiceIndex(null);
+            } else {
+                // Agregar nuevo servicio
+                setOtherServices((prev) => [...prev, newService]);
+            }
+
             setNewServiceIds("");
             setNewServicePersonnel("");
         }
-    }, [newServiceType, newServiceIds, newServicePersonnel]);
+    }, [
+        newServiceType,
+        newServiceIds,
+        newServicePersonnel,
+        editingServiceIndex,
+    ]);
 
-    const removeService = useCallback((index) => {
-        setOtherServices((prev) => prev.filter((_, i) => i !== index));
+    const editService = useCallback(
+        (index) => {
+            const service = otherServices[index];
+            setNewServiceType(service.type);
+            setNewServiceIds(service.ids);
+            setNewServicePersonnel(service.personnel);
+            setEditingServiceIndex(index);
+        },
+        [otherServices]
+    );
+
+    const cancelEditService = useCallback(() => {
+        setNewServiceType("Policía");
+        setNewServiceIds("");
+        setNewServicePersonnel("");
+        setEditingServiceIndex(null);
     }, []);
+
+    const removeService = useCallback(
+        (index) => {
+            setOtherServices((prev) => prev.filter((_, i) => i !== index));
+            if (editingServiceIndex === index) {
+                cancelEditService();
+            }
+        },
+        [editingServiceIndex, cancelEditService]
+    );
 
     const addWitness = useCallback(() => {
         if (newWitness.name.trim() || newWitness.dni.trim()) {
-            setWitnesses((prev) => [
-                ...prev,
-                {
-                    name: newWitness.name.trim(),
-                    age: newWitness.age.trim(),
-                    dni: newWitness.dni.trim(),
-                    gender: newWitness.gender,
-                    description: newWitness.description.trim(),
-                },
-            ]);
+            const witnessData = {
+                name: newWitness.name.trim(),
+                age: newWitness.age.trim(),
+                dni: newWitness.dni.trim(),
+                gender: newWitness.gender,
+                description: newWitness.description.trim(),
+            };
+
+            if (editingWitnessIndex !== null) {
+                // Editar testigo existente
+                setWitnesses((prev) =>
+                    prev.map((witness, index) =>
+                        index === editingWitnessIndex ? witnessData : witness
+                    )
+                );
+                setEditingWitnessIndex(null);
+            } else {
+                // Agregar nuevo testigo
+                setWitnesses((prev) => [...prev, witnessData]);
+            }
+
             setNewWitness({
                 name: "",
                 age: "",
@@ -226,24 +313,67 @@ const InterventionFormScreen = ({ navigation }) => {
                 description: "",
             });
         }
-    }, [newWitness]);
+    }, [newWitness, editingWitnessIndex]);
 
-    const removeWitness = useCallback((index) => {
-        setWitnesses((prev) => prev.filter((_, i) => i !== index));
+    const editWitness = useCallback(
+        (index) => {
+            const witness = witnesses[index];
+            setNewWitness({
+                name: witness.name || "",
+                age: witness.age || "",
+                dni: witness.dni || "",
+                gender: witness.gender || "",
+                description: witness.description || "",
+            });
+            setEditingWitnessIndex(index);
+        },
+        [witnesses]
+    );
+
+    const cancelEditWitness = useCallback(() => {
+        setNewWitness({
+            name: "",
+            age: "",
+            dni: "",
+            gender: "",
+            description: "",
+        });
+        setEditingWitnessIndex(null);
     }, []);
+
+    const removeWitness = useCallback(
+        (index) => {
+            setWitnesses((prev) => prev.filter((_, i) => i !== index));
+            if (editingWitnessIndex === index) {
+                cancelEditWitness();
+            }
+        },
+        [editingWitnessIndex, cancelEditWitness]
+    );
 
     const addVictim = useCallback(() => {
         if (newVictim.name.trim() || newVictim.dni.trim()) {
-            setVictims((prev) => [
-                ...prev,
-                {
-                    name: newVictim.name.trim(),
-                    age: newVictim.age.trim(),
-                    dni: newVictim.dni.trim(),
-                    gender: newVictim.gender,
-                    description: newVictim.description.trim(),
-                },
-            ]);
+            const victimData = {
+                name: newVictim.name.trim(),
+                age: newVictim.age.trim(),
+                dni: newVictim.dni.trim(),
+                gender: newVictim.gender,
+                description: newVictim.description.trim(),
+            };
+
+            if (editingVictimIndex !== null) {
+                // Editar víctima existente
+                setVictims((prev) =>
+                    prev.map((victim, index) =>
+                        index === editingVictimIndex ? victimData : victim
+                    )
+                );
+                setEditingVictimIndex(null);
+            } else {
+                // Agregar nueva víctima
+                setVictims((prev) => [...prev, victimData]);
+            }
+
             setNewVictim({
                 name: "",
                 age: "",
@@ -252,16 +382,48 @@ const InterventionFormScreen = ({ navigation }) => {
                 description: "",
             });
         }
-    }, [newVictim]);
+    }, [newVictim, editingVictimIndex]);
 
-    const removeVictim = useCallback((index) => {
-        setVictims((prev) => prev.filter((_, i) => i !== index));
+    const editVictim = useCallback(
+        (index) => {
+            const victim = victims[index];
+            setNewVictim({
+                name: victim.name || "",
+                age: victim.age || "",
+                dni: victim.dni || "",
+                gender: victim.gender || "",
+                description: victim.description || "",
+            });
+            setEditingVictimIndex(index);
+        },
+        [victims]
+    );
+
+    const cancelEditVictim = useCallback(() => {
+        setNewVictim({
+            name: "",
+            age: "",
+            dni: "",
+            gender: "",
+            description: "",
+        });
+        setEditingVictimIndex(null);
     }, []);
+
+    const removeVictim = useCallback(
+        (index) => {
+            setVictims((prev) => prev.filter((_, i) => i !== index));
+            if (editingVictimIndex === index) {
+                cancelEditVictim();
+            }
+        },
+        [editingVictimIndex, cancelEditVictim]
+    );
 
     const handleSubmit = useCallback(async () => {
         setLoading(true);
         try {
-            await addIntervention({
+            const interventionData = {
                 callTime,
                 departureTime,
                 returnTime,
@@ -271,20 +433,39 @@ const InterventionFormScreen = ({ navigation }) => {
                 witnesses,
                 victims,
                 fieldNotes,
-                audioNotes: [],
-                sketches: [],
-            });
+                audioNotes: existingIntervention?.audioNotes || [],
+                sketches: existingIntervention?.sketches || [],
+            };
 
-            Alert.alert("Éxito", "Intervención guardada correctamente", [
-                { text: "OK", onPress: () => navigation.goBack() },
-            ]);
+            if (isEditing) {
+                // Actualizar intervención existente
+                await updateIntervention(interventionId, interventionData);
+                Alert.alert("Éxito", "Intervención actualizada correctamente", [
+                    { text: "OK", onPress: () => navigation.goBack() },
+                ]);
+            } else {
+                // Crear nueva intervención
+                await addIntervention(interventionData);
+                Alert.alert("Éxito", "Intervención guardada correctamente", [
+                    { text: "OK", onPress: () => navigation.goBack() },
+                ]);
+            }
         } catch (error) {
-            Alert.alert("Error", "No se pudo guardar la intervención");
+            Alert.alert(
+                "Error",
+                `No se pudo ${
+                    isEditing ? "actualizar" : "guardar"
+                } la intervención`
+            );
         } finally {
             setLoading(false);
         }
     }, [
         addIntervention,
+        updateIntervention,
+        isEditing,
+        interventionId,
+        existingIntervention,
         callTime,
         departureTime,
         returnTime,
@@ -396,12 +577,33 @@ const InterventionFormScreen = ({ navigation }) => {
                             style={styles.input}
                         />
 
-                        <Button
-                            mode="outlined"
-                            onPress={addService}
-                            icon="plus">
-                            Agregar Servicio
-                        </Button>
+                        <View style={styles.buttonRow}>
+                            <Button
+                                mode="contained"
+                                onPress={addService}
+                                icon={
+                                    editingServiceIndex !== null
+                                        ? "check"
+                                        : "plus"
+                                }
+                                style={[
+                                    styles.actionButton,
+                                    styles.primaryButton,
+                                ]}>
+                                {editingServiceIndex !== null
+                                    ? "Actualizar"
+                                    : "Agregar"}
+                            </Button>
+                            {editingServiceIndex !== null && (
+                                <Button
+                                    mode="outlined"
+                                    onPress={cancelEditService}
+                                    icon="close"
+                                    style={styles.actionButton}>
+                                    Cancelar
+                                </Button>
+                            )}
+                        </View>
                     </View>
 
                     {otherServices.length > 0 && (
@@ -418,6 +620,7 @@ const InterventionFormScreen = ({ navigation }) => {
                                     service={service}
                                     index={index}
                                     onRemove={removeService}
+                                    onEdit={editService}
                                 />
                             ))}
                         </View>
@@ -485,9 +688,28 @@ const InterventionFormScreen = ({ navigation }) => {
                         style={styles.input}
                     />
 
-                    <Button mode="outlined" onPress={addWitness} icon="plus">
-                        Agregar Testigo
-                    </Button>
+                    <View style={styles.buttonRow}>
+                        <Button
+                            mode="contained"
+                            onPress={addWitness}
+                            icon={
+                                editingWitnessIndex !== null ? "check" : "plus"
+                            }
+                            style={[styles.actionButton, styles.primaryButton]}>
+                            {editingWitnessIndex !== null
+                                ? "Actualizar"
+                                : "Agregar"}
+                        </Button>
+                        {editingWitnessIndex !== null && (
+                            <Button
+                                mode="outlined"
+                                onPress={cancelEditWitness}
+                                icon="close"
+                                style={styles.actionButton}>
+                                Cancelar
+                            </Button>
+                        )}
+                    </View>
 
                     {witnesses.map((witness, index) => (
                         <WitnessItem
@@ -495,6 +717,7 @@ const InterventionFormScreen = ({ navigation }) => {
                             witness={witness}
                             index={index}
                             onRemove={removeWitness}
+                            onEdit={editWitness}
                         />
                     ))}
                 </AccordionSection>
@@ -557,9 +780,28 @@ const InterventionFormScreen = ({ navigation }) => {
                         style={styles.input}
                     />
 
-                    <Button mode="outlined" onPress={addVictim} icon="plus">
-                        Agregar Víctima
-                    </Button>
+                    <View style={styles.buttonRow}>
+                        <Button
+                            mode="contained"
+                            onPress={addVictim}
+                            icon={
+                                editingVictimIndex !== null ? "check" : "plus"
+                            }
+                            style={[styles.actionButton, styles.primaryButton]}>
+                            {editingVictimIndex !== null
+                                ? "Actualizar"
+                                : "Agregar"}
+                        </Button>
+                        {editingVictimIndex !== null && (
+                            <Button
+                                mode="outlined"
+                                onPress={cancelEditVictim}
+                                icon="close"
+                                style={styles.actionButton}>
+                                Cancelar
+                            </Button>
+                        )}
+                    </View>
 
                     {victims.map((victim, index) => (
                         <VictimItem
@@ -567,6 +809,7 @@ const InterventionFormScreen = ({ navigation }) => {
                             victim={victim}
                             index={index}
                             onRemove={removeVictim}
+                            onEdit={editVictim}
                         />
                     ))}
                 </AccordionSection>
@@ -591,7 +834,9 @@ const InterventionFormScreen = ({ navigation }) => {
                         loading={loading}
                         disabled={loading}
                         style={styles.submitButton}>
-                        Guardar Intervención
+                        {isEditing
+                            ? "Actualizar Intervención"
+                            : "Guardar Intervención"}
                     </Button>
                 </View>
             </ScrollView>
@@ -687,6 +932,21 @@ const styles = StyleSheet.create({
         color: "#666",
         marginTop: 4,
         fontStyle: "italic",
+    },
+    itemActions: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    buttonRow: {
+        flexDirection: "row",
+        gap: 8,
+        marginBottom: 12,
+    },
+    actionButton: {
+        flex: 1,
+    },
+    primaryButton: {
+        backgroundColor: "#d32f2f",
     },
     buttonContainer: {
         padding: 16,
