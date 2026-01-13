@@ -12,7 +12,6 @@ import {
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
 import { API_KEY } from "../../env";
-import { GoogleGenAI } from "@google/genai";
 
 const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention } =
@@ -60,7 +59,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const generateReport = async () => {
         setGenerating(true);
         try {
-            // Preparar datos para Gemini 3 Flash
+            // Preparar datos para Gemini 3.0 Flash
             const servicesText =
                 intervention.otherServices &&
                 intervention.otherServices.length > 0
@@ -118,7 +117,7 @@ FORMATO OBLIGATORIO:
 - Todo en minúsculas EXCEPTO nombres propios, siglas (DNI) y números de móviles
 - Comenzar SIEMPRE con: "al arribar al lugar se observa..." o "al arribar a la escena..."
 - Incluir OBLIGATORIAMENTE todos los nombres con formato exacto: "nombre apellido dni 12345678" (sin puntos en DNI)
-- Números de móviles: "móvil 3942 a cargo de...", "ambulancia 156 a cargo de...", etc.
+- Números de móviles: "móvil 3942", "ambulancia 156", etc.
 - Finalizar con "se retorna a base" o variante similar
 - Sin viñetas, listas ni formato estructurado
 
@@ -131,6 +130,7 @@ ESTILO DE REDACCIÓN:
 
 DATOS DE ESTA INTERVENCIÓN:
 Tipo: ${intervention.type}
+Ubicación: ${intervention.address || "no especificada"}
 Notas de campo: ${intervention.fieldNotes || "sin detalles adicionales"}
 Servicios: ${servicesText}
 Testigos: ${witnessesText}
@@ -149,25 +149,49 @@ Redactá SOLO el texto de la nota, nada más:`;
             let aiGeneratedReport = "";
 
             try {
-                console.log("Generando informe con Gemini 3 Flash...");
+                console.log("Generando informe con Gemini 3.0 Flash...");
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${API_KEY}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    parts: [{ text: prompt }],
+                                },
+                            ],
+                            generationConfig: {
+                                temperature: 0.7,
+                                topK: 40,
+                                topP: 0.95,
+                                maxOutputTokens: 1024,
+                            },
+                        }),
+                    }
+                );
 
-                // Inicializar el SDK de Google Gen AI
-                const ai = new GoogleGenAI({ apiKey: API_KEY });
+                if (!response.ok) {
+                    throw new Error(
+                        `Error de API: ${response.status} - ${response.statusText}`
+                    );
+                }
 
-                // Generar contenido con gemini-3-flash-preview
-                const response = await ai.models.generateContent({
-                    model: "gemini-3-flash-preview",
-                    contents: prompt,
-                    generationConfig: {
-                        temperature: 0.7,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 1024,
-                    },
-                });
+                const data = await response.json();
 
-                aiGeneratedReport = response.text;
-                console.log("Informe generado exitosamente con IA");
+                if (
+                    data.candidates &&
+                    data.candidates[0] &&
+                    data.candidates[0].content
+                ) {
+                    aiGeneratedReport =
+                        data.candidates[0].content.parts[0].text;
+                    console.log("Informe generado exitosamente con IA");
+                } else {
+                    throw new Error("Respuesta inválida de la API");
+                }
             } catch (apiError) {
                 console.log(
                     "Error con API de Gemini, usando generación local:",
