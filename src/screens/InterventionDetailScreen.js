@@ -113,11 +113,9 @@ const InterventionDetailScreen = ({ navigation, route }) => {
             const prompt = `Sos un bombero profesional redactando una nota de intervención oficial en Argentina. Redactá el informe siguiendo este formato estricto:
 
 FORMATO OBLIGATORIO:
-- Párrafo continuo narrativo SIN saltos de línea
-- Todo en minúsculas EXCEPTO nombres propios, siglas (DNI) y números de móviles
-- Comenzar SIEMPRE con: "al arribar al lugar se observa..." o "al arribar a la escena..."
+- Comenzar SIEMPRE con: "Al arribar al lugar se observa..." o "Al arribar a la escena..."
 - Incluir OBLIGATORIAMENTE todos los nombres con formato exacto: "nombre apellido dni 12345678" (sin puntos en DNI)
-- Números de móviles: "móvil 3942", "ambulancia 156", etc.
+- Números de móviles: "Móvil 3942 a cargo de ...", "Ambulancia 156 A cargo de ...", etc.
 - Finalizar con "se retorna a base" o variante similar
 - Sin viñetas, listas ni formato estructurado
 
@@ -138,20 +136,18 @@ Víctimas: ${victimsText}
 
 INSTRUCCIONES FINALES:
 1. Comenzá desde el arribo (NO mencionar fecha, hora de llamado ni dirección - eso ya está registrado)
-2. Describí lo observado al arribar
+2. Describí lo observado al arribar basandote en las notas de campo
 3. Detallá las acciones técnicas realizadas paso a paso
 4. Mencioná servicios actuantes con números de móvil
 5. Integrá nombres completos + DNI de forma natural en la narrativa
 6. Finalizá con retorno a base
-7. Si hay novedad importante, agregá al final: "novedad: [descripción]" o "sin novedades"
-
-Redactá SOLO el texto de la nota, nada más:`;
+7. Si hay novedad importante, agregá al final: "novedad: [descripción]" o "sin novedades"`;
             let aiGeneratedReport = "";
 
             try {
                 console.log("Generando informe con Gemini 3.0 Flash...");
                 const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
                     {
                         method: "POST",
                         headers: {
@@ -167,7 +163,7 @@ Redactá SOLO el texto de la nota, nada más:`;
                                 temperature: 0.7,
                                 topK: 40,
                                 topP: 0.95,
-                                maxOutputTokens: 1024,
+                                maxOutputTokens: 8192,
                             },
                         }),
                     }
