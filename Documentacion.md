@@ -1008,16 +1008,19 @@ if (__DEV__) {
 
 ### Google Gemini API
 
-**Biblioteca**: `@google/genai`
+**Método**: Fetch directo a la API REST de Google Generative Language API
+
+**Modelo**: `gemini-3-flash-preview`
+
+**Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`
 
 **Configuración:**
 
 ```javascript
-import { GoogleGenerativeAI } from "@google/genai";
 import { GEMINI_API_KEY } from "../env";
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const API_URL =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
 ```
 
 ### Generación de Informes
@@ -1025,16 +1028,48 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 **Proceso:**
 
 1. **Preparar Datos**: Extraer información relevante de la intervención
-2. **Crear Prompt**: Estructurar el prompt con instrucciones específicas
-3. **Llamar a la API**: Enviar el prompt a Gemini
-4. **Procesar Respuesta**: Recibir y formatear el informe generado
-5. **Guardar Informe**: Almacenar en la BD
+2. **Crear Prompt**: Estructurar el prompt con formato bomberil argentino específico
+3. **Llamar a la API REST**: Enviar POST a la API de Gemini con fetch
+4. **Procesar Respuesta**: Recibir y extraer el texto del informe generado
+5. **Fallback Local**: Si falla la API, generar informe básico localmente
+6. **Guardar Informe**: Almacenar en la BD
 
-**Ejemplo de Prompt:**
+**Implementación Real:**
+
+```javascript
+// Llamada directa a la API REST de Google Gemini
+const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
+    {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            contents: [
+                {
+                    parts: [{ text: prompt }],
+                },
+            ],
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 8192,
+            },
+        }),
+    }
+);
+
+const data = await response.json();
+const aiGeneratedReport = data.candidates[0].content.parts[0].text;
+```
+
+**Ejemplo de Prompt (Estilo Bomberil Argentino):**
 
 ```javascript
 const prompt = `
-Eres un oficial de bomberos experimentado redactando un informe técnico profesional.
+Sos un bombero profesional redactando una nota de intervención oficial en Argentina.
 
 Genera un informe formal de intervención de bomberos basado en los siguientes datos:
 
@@ -1063,29 +1098,30 @@ ${intervention.victims.map((v) => `- ${v.name}: ${v.description}`).join("\n")}
 NOTAS DE CAMPO:
 ${intervention.fieldNotes}
 
-Estructura el informe en las siguientes secciones:
-1. DATOS GENERALES
-2. DESCRIPCIÓN DE LOS HECHOS
-3. MEDIOS INTERVINIENTES
-4. PERSONAS INVOLUCRADAS
-5. APRECIACIÓN Y CONCLUSIONES
-6. RECOMENDACIONES
-
-Usa lenguaje técnico, profesional y objetivo. El informe debe ser claro, conciso y completo.
+ESTILO DE REDACCIÓN:
+- Lenguaje técnico bomberil argentino
+- Comenzar siempre con: "Al arribar al lugar se observa..."
+- Incluir todos los nombres con DNI (formato: nombre apellido dni 12345678)
+- Mencionar números de móviles: "Móvil 3942 a cargo de..."
+- Finalizar con "se retorna a base"
+- Narración en tercera persona: "se procedió a", "se realizó"
+- Sin listas ni formato estructurado, solo narrativa continua
 `;
 ```
 
 **Manejo de Errores:**
 
--   Sin conexión a internet: Mostrar mensaje apropiado
--   API key inválida: Informar al usuario
--   Error de API: Reintentar o guardar para procesar después
+-   Sin conexión a internet: Fallback automático a generación local básica
+-   API key inválida: Informar al usuario y usar fallback
+-   Error de API (4xx/5xx): Se captura el error y se genera un informe local simple
+-   **Fallback automático**: Si la API falla por cualquier razón, se genera un informe narrativo local basado en los datos registrados, garantizando que siempre se pueda obtener un informe
 
 **Costos:**
 
--   Gemini 1.5 Flash tiene una cuota gratuita generosa
+-   Gemini 3 Flash Preview tiene cuota gratuita generosa (60 requests/minuto)
 -   Monitorear uso para evitar cargos inesperados
 -   Implementar caché de informes para evitar regeneraciones
+-   El fallback local asegura que siempre se pueda generar un informe sin costo
 
 ---
 
