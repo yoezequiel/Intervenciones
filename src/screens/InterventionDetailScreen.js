@@ -52,12 +52,26 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                         navigation.goBack();
                     },
                 },
-            ]
+            ],
         );
     };
 
     const generateReport = async () => {
         setGenerating(true);
+
+        // Validar que existe la API_KEY
+        console.log("API_KEY disponible:", API_KEY ? "SÍ" : "NO");
+        console.log("API_KEY length:", API_KEY?.length || 0);
+
+        if (!API_KEY || API_KEY === "undefined" || API_KEY === "") {
+            console.error("API_KEY no está configurada correctamente");
+            Alert.alert(
+                "Error de configuración",
+                "La clave de API no está configurada. La aplicación usará la generación local de informes.",
+            );
+            // No retornar, dejar que continúe con el fallback
+        }
+
         try {
             // Preparar datos para Gemini 3.0 Flash
             const servicesText =
@@ -72,7 +86,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                                       service.personnel
                                           ? ` - Personal: ${service.personnel}`
                                           : ""
-                                  }`
+                                  }`,
                           )
                           .join(", ")
                     : "Sin servicios registrados";
@@ -146,6 +160,11 @@ INSTRUCCIONES FINALES:
 
             try {
                 console.log("Generando informe con Gemini 3.0 Flash...");
+                console.log(
+                    "URL API:",
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY?.substring(0, 10)}...`,
+                );
+
                 const response = await fetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
                     {
@@ -166,12 +185,19 @@ INSTRUCCIONES FINALES:
                                 maxOutputTokens: 8192,
                             },
                         }),
-                    }
+                    },
                 );
 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(
+                        "Error de API:",
+                        response.status,
+                        response.statusText,
+                    );
+                    console.error("Detalle del error:", errorText);
                     throw new Error(
-                        `Error de API: ${response.status} - ${response.statusText}`
+                        `Error de API: ${response.status} - ${response.statusText}`,
                     );
                 }
 
@@ -189,10 +215,20 @@ INSTRUCCIONES FINALES:
                     throw new Error("Respuesta inválida de la API");
                 }
             } catch (apiError) {
-                console.log(
+                console.error(
                     "Error con API de Gemini, usando generación local:",
-                    apiError.message
+                    apiError.message,
                 );
+                console.error("Stack completo del error:", apiError);
+
+                // Mostrar alerta solo si no es por falta de API_KEY (ya mostrado antes)
+                if (API_KEY && API_KEY !== "undefined" && API_KEY !== "") {
+                    Alert.alert(
+                        "Aviso",
+                        "No se pudo conectar con la IA. Se generará un informe básico.",
+                        [{ text: "Entendido" }],
+                    );
+                }
 
                 // Fallback: generar un informe narrativo local si la API falla
                 const timeInfo = intervention.callTime
@@ -227,7 +263,7 @@ INSTRUCCIONES FINALES:
                             if (service.personnel)
                                 serviceDesc += ` con personal ${service.personnel}`;
                             return serviceDesc;
-                        }
+                        },
                     );
 
                     if (servicesList.length === 1) {
@@ -257,7 +293,7 @@ INSTRUCCIONES FINALES:
 
                 if (intervention.victims.length > 0) {
                     const victimsList = intervention.victims.map((v) =>
-                        v.description ? `${v.name} (${v.description})` : v.name
+                        v.description ? `${v.name} (${v.description})` : v.name,
                     );
                     if (victimsList.length === 1) {
                         aiGeneratedReport += `Se atendió a ${victimsList[0]}. `;
@@ -292,7 +328,7 @@ INSTRUCCIONES FINALES:
         } catch (error) {
             Alert.alert(
                 "Error",
-                "No se pudo generar el informe con IA. Verifica tu conexión a internet."
+                "No se pudo generar el informe con IA. Verifica tu conexión a internet.",
             );
         } finally {
             setGenerating(false);
@@ -377,7 +413,7 @@ INSTRUCCIONES FINALES:
                                             />
                                         )}
                                     </View>
-                                )
+                                ),
                             )}
                         </Card.Content>
                     </Card>
@@ -444,7 +480,7 @@ INSTRUCCIONES FINALES:
                                                 )}
                                             </View>
                                         );
-                                    }
+                                    },
                                 )}
                             </>
                         )}
