@@ -126,21 +126,25 @@ const InterventionDetailScreen = ({ navigation, route }) => {
 
             const prompt = `Sos un bombero profesional redactando una nota de intervención oficial en Argentina. Redactá el informe siguiendo este formato estricto:
 
-FORMATO OBLIGATORIO:
-- Comenzar SIEMPRE con: "Al arribar al lugar se observa..." o "Al arribar a la escena..."
-- Incluir OBLIGATORIAMENTE todos los nombres con formato exacto: "nombre apellido dni 12345678" (sin puntos en DNI)
-- Números de móviles: "Móvil 3942 a cargo de ...", "Ambulancia 156 A cargo de ...", etc.
-- Finalizar con "se retorna a base" o variante similar
-- Sin viñetas, listas ni formato estructurado
+REGLAS CRÍTICAS:
+1. USÁ ÚNICAMENTE los datos proporcionados abajo. 
+2. SI FALTA INFORMACIÓN (nombres, DNI, móviles, acciones técnicas), NO LA INVENTES.
+3. Si un dato no está presente, simplemente omitilo o redactá de forma genérica sin inventar detalles.
+4. NUNCA menciones personas o móviles que no figuren en la sección "DATOS DE ESTA INTERVENCIÓN".
 
-ESTILO DE REDACCIÓN:
-- Lenguaje técnico bomberil: "desplegar líneas", "tendido de línea", "corte de suministro", "descarceración", "ventilación forzada"
-- Mencionar herramientas específicas cuando corresponda: "motobomba", "autobomba", "escalera", "Holmatro", "canaleta"
-- Narración en tercera persona o pasiva: "se procedió a", "se realizó", "se verificó"
-- Incluir detalles técnicos: cantidad de tramos, diámetros de mangueras, estado de la situación al arribo
-- Si hay personas, SIEMPRE incluir: nombre completo + DNI (formato: nombre apellido dni número sin puntos)
+FORMATO DE REDACCIÓN:
+- Comenzar con: "Al arribar al lugar se observa..." o "Al arribar a la escena..."
+- Solo incluir nombres y DNI si están en los datos: "nombre apellido dni 12345678"
+- Solo incluir móviles si están en los datos: "Móvil 3942 a cargo de ...", "Ambulancia 156 A cargo de ...", etc.
+- Finalizar con "se retorna a base" o variante similar.
+- Narrativa continua, sin viñetas ni listas.
 
-DATOS DE ESTA INTERVENCIÓN:
+ESTILO TÉCNICO:
+- Lenguaje técnico bomberil: "desplegar líneas", "tendido de línea", "corte de suministro", "descarceración", "ventilación forzada".
+- Mencionar herramientas específicas (solo si son coherentes con las notas): "motobomba", "autobomba", "escalera", "Holmatro", "canaleta".
+- Narración en tercera persona o pasiva: "se procedió a", "se realizó", "se verificó".
+
+DATOS DE ESTA INTERVENCIÓN (USAR SOLO ESTO):
 Tipo: ${intervention.type}
 Ubicación: ${intervention.address || "no especificada"}
 Notas de campo: ${intervention.fieldNotes || "sin detalles adicionales"}
@@ -149,24 +153,20 @@ Testigos: ${witnessesText}
 Víctimas: ${victimsText}
 
 INSTRUCCIONES FINALES:
-1. Comenzá desde el arribo (NO mencionar fecha, hora de llamado ni dirección - eso ya está registrado)
-2. Describí lo observado al arribar basandote en las notas de campo
-3. Detallá las acciones técnicas realizadas paso a paso
-4. Mencioná servicios actuantes con números de móvil
-5. Integrá nombres completos + DNI de forma natural en la narrativa
-6. Finalizá con retorno a base
-7. Si hay novedad importante, agregá al final: "novedad: [descripción]" o "sin novedades"`;
+1. Comenzá desde el arribo (NO mencionar fecha ni dirección en el cuerpo del texto).
+2. Describí lo observado al arribar basándote estrictamente en las notas de campo.
+3. Detallá las acciones técnicas realizadas basándote solo en lo registrado.
+4. Mencioná servicios actuantes y móviles SOLO si están listados arriba.
+5. Integrá los nombres y DNI proporcionados de forma natural.
+6. Finalizá con retorno a base.`;
             let aiGeneratedReport = "";
 
             try {
                 console.log("Generando informe con Gemini 3.0 Flash...");
-                console.log(
-                    "URL API:",
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY?.substring(0, 10)}...`,
-                );
-
+                const MODEL_NAME = "gemini-3-flash-preview";
+                
                 const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`,
                     {
                         method: "POST",
                         headers: {
@@ -179,10 +179,10 @@ INSTRUCCIONES FINALES:
                                 },
                             ],
                             generationConfig: {
-                                temperature: 0.7,
+                                temperature: 0.2, // Reducimos temperatura para menos creatividad/alucinación
                                 topK: 40,
                                 topP: 0.95,
-                                maxOutputTokens: 8192,
+                                maxOutputTokens: 2048,
                             },
                         }),
                     },

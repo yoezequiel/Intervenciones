@@ -220,7 +220,10 @@ export const DatabaseProvider = ({ children }) => {
     };
 
     const getIntervention = (id) => {
-        return interventions.find((intervention) => intervention.id === id);
+        if (!id) return null;
+        return interventions.find(
+            (intervention) => String(intervention.id) === String(id)
+        );
     };
 
     return (
