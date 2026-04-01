@@ -1,7 +1,7 @@
 import { MD3LightTheme } from "react-native-paper";
 
 /**
- * Tema bomberil personalizado
+ * Tema bomberil personalizado (Modern Card-Based MD3)
  * Basado en los colores característicos de bomberos:
  * - Rojo (#d32f2f): Color primario de emergencias
  * - Rojo oscuro (#b71c1c): Color de acentuación
@@ -14,36 +14,50 @@ export const firefighterTheme = {
         ...MD3LightTheme.colors,
         // Colores primarios bomberiles
         primary: "#d32f2f",
-        primaryContainer: "#ffcdd2",
-        secondary: "#FFC107",
-        secondaryContainer: "#FFF8E1",
-        tertiary: "#212121",
-        error: "#b71c1c",
-
-        // Fondos y superficies (siempre light)
-        background: "#FFFFFF",
-        surface: "#FFFFFF",
-        surfaceVariant: "#f5f5f5",
-
-        // Colores de texto sobre cada fondo
         onPrimary: "#FFFFFF",
-        onSecondary: "#000000",
-        onBackground: "#212121",
-        onSurface: "#212121",
+        primaryContainer: "#ffcdd2",
+        onPrimaryContainer: "#b71c1c",
 
-        // Otros
-        outline: "#757575",
+        // Colores secundarios (Amarillo/Dorado de advertencia)
+        secondary: "#ffb300",
+        onSecondary: "#422c00",
+        secondaryContainer: "#ffecb3",
+        onSecondaryContainer: "#ff8f00",
 
-        // Elevaciones (todas blancas para modo light)
+        // Colores terciarios (Gris oscuro/Negro)
+        tertiary: "#424242",
+        onTertiary: "#FFFFFF",
+        tertiaryContainer: "#eeeeee",
+        onTertiaryContainer: "#212121",
+
+        error: "#b71c1c",
+        onError: "#FFFFFF",
+        errorContainer: "#f9dedc",
+        onErrorContainer: "#410e0b",
+
+        // Fondos y superficies
+        background: "#f8f9fa", // Fondo sutilmente gris para resaltar las tarjetas
+        onBackground: "#1a1c1e",
+        surface: "#FFFFFF",
+        onSurface: "#1a1c1e",
+        surfaceVariant: "#f0f2f5",
+        onSurfaceVariant: "#44474f",
+        
+        // Bordes e iconos
+        outline: "#74777f",
+        outlineVariant: "#c4c6d0",
+
+        // Elevaciones MD3 (tonos aplicados sobre surface)
         elevation: {
-            level0: "#FFFFFF",
-            level1: "#FFFFFF",
-            level2: "#FFFFFF",
-            level3: "#FFFFFF",
-            level4: "#FFFFFF",
-            level5: "#FFFFFF",
+            level0: "transparent",
+            level1: "#f5f5f5", // Sombra muy ligera
+            level2: "#eeeeee",
+            level3: "#e0e0e0",
+            level4: "#bdbdbd",
+            level5: "#9e9e9e",
         },
     },
+    roundness: 2, // Ligeramente más redondeado (default es 1)
 };
 
 /**
@@ -53,12 +67,15 @@ export const colors = {
     // Colores bomberiles
     firefighterRed: "#d32f2f",
     firefighterRedDark: "#b71c1c",
-    firefighterYellow: "#FFC107",
+    firefighterYellow: "#ffb300",
     firefighterBlack: "#212121",
+    firefighterBlue: "#1976d2",
+    firefighterGreen: "#2e7d32",
+    firefighterOrange: "#ed6c02",
 
     // Fondos
     white: "#FFFFFF",
-    background: "#FFFFFF",
+    background: "#f8f9fa",
     cardBackground: "#FFFFFF",
 
     // Grises
@@ -74,7 +91,7 @@ export const colors = {
     gray900: "#212121",
 
     // Colores de texto
-    textPrimary: "#212121",
-    textSecondary: "#666666",
+    textPrimary: "#1a1c1e",
+    textSecondary: "#44474f",
     textDisabled: "#888888",
 };

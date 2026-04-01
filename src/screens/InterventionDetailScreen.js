@@ -9,21 +9,63 @@ import {
     Text,
     Divider,
     IconButton,
+    Avatar,
+    List,
+    useTheme,
+    Surface,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
 import { API_KEY } from "../../env";
+import { InterventionType } from "../types";
+
+const getTypeIcon = (type) => {
+    switch (type) {
+        case InterventionType.FIRE:
+        case "Incendio":
+            return "fire";
+        case InterventionType.RESCUE:
+        case "Rescate":
+            return "lifebuoy";
+        case InterventionType.ACCIDENT:
+        case "Accidente":
+            return "car-emergency";
+        case InterventionType.HAZMAT:
+        case "Materiales Peligrosos":
+            return "biohazard";
+        default:
+            return "alert-circle-outline";
+    }
+};
+
+const getTypeColor = (type, theme) => {
+    switch (type) {
+        case InterventionType.FIRE:
+        case "Incendio":
+            return theme.colors.error;
+        case InterventionType.RESCUE:
+        case "Rescate":
+            return theme.colors.primary;
+        case InterventionType.ACCIDENT:
+        case "Accidente":
+            return theme.colors.secondary;
+        default:
+            return theme.colors.outline;
+    }
+};
 
 const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention } =
         useDatabase();
     const [generating, setGenerating] = useState(false);
+    const theme = useTheme();
 
     const intervention = getIntervention(route.params.id);
 
     if (!intervention) {
         return (
-            <View style={styles.container}>
-                <Text>Intervención no encontrada</Text>
+            <View style={[styles.container, styles.centerContent]}>
+                <Avatar.Icon size={64} icon="alert-circle-outline" style={{backgroundColor: 'transparent'}} color={theme.colors.outline} />
+                <Text variant="titleMedium" style={{color: theme.colors.outline, marginTop: 16}}>Intervención no encontrada</Text>
             </View>
         );
     }
@@ -59,9 +101,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const generateReport = async () => {
         setGenerating(true);
 
-        // Validar que existe la API_KEY
         console.log("API_KEY disponible:", API_KEY ? "SÍ" : "NO");
-        console.log("API_KEY length:", API_KEY?.length || 0);
 
         if (!API_KEY || API_KEY === "undefined" || API_KEY === "") {
             console.error("API_KEY no está configurada correctamente");
@@ -69,11 +109,9 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                 "Error de configuración",
                 "La clave de API no está configurada. La aplicación usará la generación local de informes.",
             );
-            // No retornar, dejar que continúe con el fallback
         }
 
         try {
-            // Preparar datos para Gemini 3.0 Flash
             const servicesText =
                 intervention.otherServices &&
                 intervention.otherServices.length > 0
@@ -95,7 +133,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                 intervention.witnesses && intervention.witnesses.length > 0
                     ? intervention.witnesses
                           .map((w) => {
-                              if (typeof w === "string") return w; // Compatibilidad con datos antiguos
+                              if (typeof w === "string") return w; 
                               const parts = [];
                               if (w.name) parts.push(w.name);
                               if (w.age) parts.push(`${w.age} años`);
@@ -159,10 +197,10 @@ INSTRUCCIONES FINALES:
 4. Mencioná servicios actuantes y móviles SOLO si están listados arriba.
 5. Integrá los nombres y DNI proporcionados de forma natural.
 6. Finalizá con retorno a base.`;
+            
             let aiGeneratedReport = "";
 
             try {
-                console.log("Generando informe con Gemini 3.0 Flash...");
                 const MODEL_NAME = "gemini-3-flash-preview";
                 
                 const response = await fetch(
@@ -179,7 +217,7 @@ INSTRUCCIONES FINALES:
                                 },
                             ],
                             generationConfig: {
-                                temperature: 0.2, // Reducimos temperatura para menos creatividad/alucinación
+                                temperature: 0.2,
                                 topK: 40,
                                 topP: 0.95,
                                 maxOutputTokens: 2048,
@@ -189,39 +227,19 @@ INSTRUCCIONES FINALES:
                 );
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(
-                        "Error de API:",
-                        response.status,
-                        response.statusText,
-                    );
-                    console.error("Detalle del error:", errorText);
-                    throw new Error(
-                        `Error de API: ${response.status} - ${response.statusText}`,
-                    );
+                    throw new Error(`Error de API: ${response.status} - ${response.statusText}`);
                 }
 
                 const data = await response.json();
 
-                if (
-                    data.candidates &&
-                    data.candidates[0] &&
-                    data.candidates[0].content
-                ) {
-                    aiGeneratedReport =
-                        data.candidates[0].content.parts[0].text;
-                    console.log("Informe generado exitosamente con IA");
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    aiGeneratedReport = data.candidates[0].content.parts[0].text;
                 } else {
                     throw new Error("Respuesta inválida de la API");
                 }
             } catch (apiError) {
-                console.error(
-                    "Error con API de Gemini, usando generación local:",
-                    apiError.message,
-                );
-                console.error("Stack completo del error:", apiError);
+                console.error("Error con API de Gemini, usando generación local:", apiError.message);
 
-                // Mostrar alerta solo si no es por falta de API_KEY (ya mostrado antes)
                 if (API_KEY && API_KEY !== "undefined" && API_KEY !== "") {
                     Alert.alert(
                         "Aviso",
@@ -230,11 +248,8 @@ INSTRUCCIONES FINALES:
                     );
                 }
 
-                // Fallback: generar un informe narrativo local si la API falla
                 const timeInfo = intervention.callTime
-                    ? `el ${formatDate(intervention.createdAt)} a las ${
-                          intervention.callTime
-                      }`
+                    ? `el ${formatDate(intervention.createdAt)} a las ${intervention.callTime}`
                     : `el ${formatDate(intervention.createdAt)}`;
                 const locationInfo = intervention.address
                     ? `en ${intervention.address}`
@@ -242,77 +257,36 @@ INSTRUCCIONES FINALES:
 
                 aiGeneratedReport += `Se recibió llamado de emergencia ${timeInfo} por ${intervention.type.toLowerCase()} ${locationInfo}. `;
 
-                if (intervention.departureTime) {
-                    aiGeneratedReport += `La salida se efectuó a las ${intervention.departureTime}. `;
-                }
+                if (intervention.departureTime) aiGeneratedReport += `La salida se efectuó a las ${intervention.departureTime}. `;
+                if (intervention.fieldNotes) aiGeneratedReport += `${intervention.fieldNotes} `;
+                else aiGeneratedReport += `La intervención se desarrolló siguiendo los protocolos establecidos para este tipo de emergencia. `;
 
-                if (intervention.fieldNotes) {
-                    aiGeneratedReport += `${intervention.fieldNotes} `;
-                } else {
-                    aiGeneratedReport += `La intervención se desarrolló siguiendo los protocolos establecidos para este tipo de emergencia. `;
-                }
-
-                if (
-                    intervention.otherServices &&
-                    intervention.otherServices.length > 0
-                ) {
-                    const servicesList = intervention.otherServices.map(
-                        (service) => {
-                            let serviceDesc = service.type;
-                            if (service.ids) serviceDesc += ` (${service.ids})`;
-                            if (service.personnel)
-                                serviceDesc += ` con personal ${service.personnel}`;
-                            return serviceDesc;
-                        },
-                    );
-
-                    if (servicesList.length === 1) {
-                        aiGeneratedReport += `En la intervención participó ${servicesList[0]}. `;
-                    } else {
-                        aiGeneratedReport += `En la intervención participaron ${servicesList
-                            .slice(0, -1)
-                            .join(", ")} y ${
-                            servicesList[servicesList.length - 1]
-                        }. `;
-                    }
+                if (intervention.otherServices && intervention.otherServices.length > 0) {
+                    const servicesList = intervention.otherServices.map((service) => {
+                        let serviceDesc = service.type;
+                        if (service.ids) serviceDesc += ` (${service.ids})`;
+                        if (service.personnel) serviceDesc += ` con personal ${service.personnel}`;
+                        return serviceDesc;
+                    });
+                    if (servicesList.length === 1) aiGeneratedReport += `En la intervención participó ${servicesList[0]}. `;
+                    else aiGeneratedReport += `En la intervención participaron ${servicesList.slice(0, -1).join(", ")} y ${servicesList[servicesList.length - 1]}. `;
                 }
 
                 if (intervention.witnesses.length > 0) {
-                    if (intervention.witnesses.length === 1) {
-                        aiGeneratedReport += `Se registró como testigo a ${intervention.witnesses[0]}. `;
-                    } else {
-                        aiGeneratedReport += `Se registraron como testigos a ${intervention.witnesses
-                            .slice(0, -1)
-                            .join(", ")} y ${
-                            intervention.witnesses[
-                                intervention.witnesses.length - 1
-                            ]
-                        }. `;
-                    }
+                    if (intervention.witnesses.length === 1) aiGeneratedReport += `Se registró como testigo a ${intervention.witnesses[0]}. `;
+                    else aiGeneratedReport += `Se registraron como testigos a ${intervention.witnesses.slice(0, -1).join(", ")} y ${intervention.witnesses[intervention.witnesses.length - 1]}. `;
                 }
 
                 if (intervention.victims.length > 0) {
-                    const victimsList = intervention.victims.map((v) =>
-                        v.description ? `${v.name} (${v.description})` : v.name,
-                    );
-                    if (victimsList.length === 1) {
-                        aiGeneratedReport += `Se atendió a ${victimsList[0]}. `;
-                    } else {
-                        aiGeneratedReport += `Se atendió a ${victimsList
-                            .slice(0, -1)
-                            .join(", ")} y ${
-                            victimsList[victimsList.length - 1]
-                        }. `;
-                    }
+                    const victimsList = intervention.victims.map((v) => v.description ? `${v.name} (${v.description})` : v.name);
+                    if (victimsList.length === 1) aiGeneratedReport += `Se atendió a ${victimsList[0]}. `;
+                    else aiGeneratedReport += `Se atendió a ${victimsList.slice(0, -1).join(", ")} y ${victimsList[victimsList.length - 1]}. `;
                 } else {
                     aiGeneratedReport += `No se registraron víctimas en el incidente. `;
                 }
 
-                if (intervention.returnTime) {
-                    aiGeneratedReport += `El regreso al cuartel se efectuó a las ${intervention.returnTime}.`;
-                } else {
-                    aiGeneratedReport += `La intervención se completó satisfactoriamente.`;
-                }
+                if (intervention.returnTime) aiGeneratedReport += `El regreso al cuartel se efectuó a las ${intervention.returnTime}.`;
+                else aiGeneratedReport += `La intervención se completó satisfactoriamente.`;
             }
 
             await updateIntervention(intervention.id, {
@@ -326,359 +300,342 @@ INSTRUCCIONES FINALES:
                 });
             }
         } catch (error) {
-            Alert.alert(
-                "Error",
-                "No se pudo generar el informe con IA. Verifica tu conexión a internet.",
-            );
+            Alert.alert("Error", "No se pudo generar el informe. Verifica tu conexión a internet.");
         } finally {
             setGenerating(false);
         }
     };
 
+    const iconColor = getTypeColor(intervention.type, theme);
+    const iconName = getTypeIcon(intervention.type);
+
     return (
-        <ScrollView style={styles.container}>
-            <Card style={styles.card}>
-                <Card.Content>
-                    <View style={styles.header}>
-                        <Title style={styles.title}>{intervention.type}</Title>
-                        <IconButton icon="delete" onPress={handleDelete} />
-                    </View>
-                    <Chip mode="outlined" style={styles.dateChip}>
-                        {formatDate(intervention.createdAt)}
-                    </Chip>
-                </Card.Content>
-            </Card>
+        <View style={styles.mainContainer}>
+            <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.scrollContent}>
+                
+                {/* Header Card */}
+                <Card style={[styles.card, { borderTopWidth: 6, borderTopColor: iconColor }]} mode="elevated" elevation={1}>
+                    <Card.Content>
+                        <View style={styles.header}>
+                            <View style={styles.headerTitleRow}>
+                                <Avatar.Icon size={48} icon={iconName} style={{backgroundColor: theme.colors.surfaceVariant}} color={iconColor} />
+                                <View style={styles.headerText}>
+                                    <Title style={styles.title}>{intervention.type}</Title>
+                                    <Text variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                                        {formatDate(intervention.createdAt)}
+                                    </Text>
+                                </View>
+                            </View>
+                            <IconButton icon="delete" iconColor={theme.colors.error} onPress={handleDelete} style={styles.deleteBtn} />
+                        </View>
+                        
+                        <View style={styles.addressRow}>
+                            <Avatar.Icon size={32} icon="map-marker" style={styles.transparentIcon} color={theme.colors.primary} />
+                            <Text variant="bodyLarge" style={styles.addressText}>{intervention.address || "Ubicación no especificada"}</Text>
+                        </View>
+                    </Card.Content>
+                </Card>
 
-            <Card style={styles.card}>
-                <Card.Content>
-                    <Title>Cronología</Title>
-                    <View style={styles.timelineItem}>
-                        <Text variant="labelMedium">Llamado:</Text>
-                        <Text variant="bodyMedium">
-                            {intervention.callTime}
-                        </Text>
-                    </View>
-                    <View style={styles.timelineItem}>
-                        <Text variant="labelMedium">Salida:</Text>
-                        <Text variant="bodyMedium">
-                            {intervention.departureTime}
-                        </Text>
-                    </View>
-                    <View style={styles.timelineItem}>
-                        <Text variant="labelMedium">Regreso:</Text>
-                        <Text variant="bodyMedium">
-                            {intervention.returnTime}
-                        </Text>
-                    </View>
-                </Card.Content>
-            </Card>
+                {/* Timeline Card */}
+                <Card style={styles.card} mode="elevated" elevation={1}>
+                    <Card.Content>
+                        <Title style={styles.sectionTitle}>Cronología</Title>
+                        <View style={styles.timelineContainer}>
+                            <View style={styles.timelineLine} />
+                            
+                            <View style={styles.timelineItem}>
+                                <Avatar.Icon size={28} icon="phone-incoming" style={[styles.timelineIcon, {backgroundColor: theme.colors.errorContainer}]} color={theme.colors.error} />
+                                <View style={styles.timelineContent}>
+                                    <Text variant="labelLarge" style={styles.timelineLabel}>Llamado</Text>
+                                    <Text variant="bodyLarge">{intervention.callTime || "--:--"}</Text>
+                                </View>
+                            </View>
 
-            <Card style={styles.card}>
-                <Card.Content>
-                    <Title>Ubicación</Title>
-                    <Paragraph>{intervention.address}</Paragraph>
-                </Card.Content>
-            </Card>
+                            <View style={styles.timelineItem}>
+                                <Avatar.Icon size={28} icon="truck-fast" style={[styles.timelineIcon, {backgroundColor: theme.colors.primaryContainer}]} color={theme.colors.primary} />
+                                <View style={styles.timelineContent}>
+                                    <Text variant="labelLarge" style={styles.timelineLabel}>Salida</Text>
+                                    <Text variant="bodyLarge">{intervention.departureTime || "--:--"}</Text>
+                                </View>
+                            </View>
 
-            {intervention.otherServices &&
-                intervention.otherServices.length > 0 && (
-                    <Card style={styles.card}>
+                            <View style={styles.timelineItem}>
+                                <Avatar.Icon size={28} icon="home-import-outline" style={[styles.timelineIcon, {backgroundColor: theme.colors.secondaryContainer}]} color={theme.colors.secondary} />
+                                <View style={styles.timelineContent}>
+                                    <Text variant="labelLarge" style={styles.timelineLabel}>Regreso</Text>
+                                    <Text variant="bodyLarge">{intervention.returnTime || "--:--"}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </Card.Content>
+                </Card>
+
+                {/* Field Notes */}
+                {intervention.fieldNotes && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
                         <Card.Content>
-                            <Title>Servicios Intervinientes</Title>
-                            {intervention.otherServices.map(
-                                (service, index) => (
-                                    <View
-                                        key={index}
-                                        style={styles.serviceItem}>
-                                        <Text
-                                            variant="bodyMedium"
-                                            style={styles.serviceType}>
-                                            {service.type}
-                                        </Text>
-                                        {service.ids && (
-                                            <Text variant="bodySmall">
-                                                IDs: {service.ids}
-                                            </Text>
-                                        )}
-                                        {service.personnel && (
-                                            <Text variant="bodySmall">
-                                                Personal: {service.personnel}
-                                            </Text>
-                                        )}
-                                        {index <
-                                            intervention.otherServices.length -
-                                                1 && (
-                                            <Divider
-                                                style={styles.serviceDivider}
-                                            />
-                                        )}
-                                    </View>
-                                ),
-                            )}
+                            <Title style={styles.sectionTitle}>Notas de Campo</Title>
+                            <Surface style={styles.notesSurface} elevation={0}>
+                                <Text variant="bodyLarge" style={styles.notesText}>{intervention.fieldNotes}</Text>
+                            </Surface>
                         </Card.Content>
                     </Card>
                 )}
 
-            <Card style={styles.card}>
-                <Card.Content>
-                    <Title>Personas Involucradas</Title>
+                {/* Services */}
+                {intervention.otherServices && intervention.otherServices.length > 0 && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content style={styles.noPaddingContent}>
+                            <Title style={[styles.sectionTitle, {marginHorizontal: 16, marginTop: 16}]}>Servicios Intervinientes</Title>
+                            {intervention.otherServices.map((service, index) => (
+                                <List.Item
+                                    key={index}
+                                    title={service.type}
+                                    description={`IDs: ${service.ids || 'N/A'} • Personal: ${service.personnel || 'N/A'}`}
+                                    left={props => <List.Icon {...props} icon="account-hard-hat" color={theme.colors.primary} />}
+                                    style={styles.listItem}
+                                />
+                            ))}
+                        </Card.Content>
+                    </Card>
+                )}
 
-                    {intervention.witnesses &&
-                        intervention.witnesses.length > 0 && (
-                            <>
-                                <Text
-                                    variant="titleSmall"
-                                    style={styles.sectionTitle}>
-                                    Testigos
-                                </Text>
-                                {intervention.witnesses.map(
-                                    (witness, index) => {
-                                        // Compatibilidad con formato antiguo (string)
-                                        if (typeof witness === "string") {
-                                            return (
-                                                <Chip
-                                                    key={index}
-                                                    style={styles.chip}>
-                                                    {witness}
-                                                </Chip>
-                                            );
-                                        }
-                                        // Nuevo formato (objeto)
+                {/* People involved */}
+                {((intervention.witnesses && intervention.witnesses.length > 0) || 
+                  (intervention.victims && intervention.victims.length > 0)) && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content style={styles.noPaddingContent}>
+                            <Title style={[styles.sectionTitle, {marginHorizontal: 16, marginTop: 16}]}>Personas Involucradas</Title>
+
+                            {intervention.victims && intervention.victims.length > 0 && (
+                                <>
+                                    <List.Subheader style={styles.subHeader}>Víctimas</List.Subheader>
+                                    {intervention.victims.map((victim, index) => (
+                                        <List.Item
+                                            key={`v-${index}`}
+                                            title={victim.name || "Sin nombre"}
+                                            description={[
+                                                victim.age ? `${victim.age} años` : null,
+                                                victim.dni ? `DNI: ${victim.dni}` : null,
+                                                victim.description
+                                            ].filter(Boolean).join(" • ")}
+                                            left={props => <List.Icon {...props} icon="account-injury" color={theme.colors.error} />}
+                                            style={styles.listItem}
+                                        />
+                                    ))}
+                                </>
+                            )}
+
+                            {intervention.witnesses && intervention.witnesses.length > 0 && (
+                                <>
+                                    <List.Subheader style={styles.subHeader}>Testigos</List.Subheader>
+                                    {intervention.witnesses.map((witness, index) => {
+                                        const isString = typeof witness === "string";
+                                        const name = isString ? witness : (witness.name || "Sin nombre");
+                                        const desc = isString ? null : [
+                                            witness.age ? `${witness.age} años` : null,
+                                            witness.dni ? `DNI: ${witness.dni}` : null,
+                                            witness.description
+                                        ].filter(Boolean).join(" • ");
+
                                         return (
-                                            <View
-                                                key={index}
-                                                style={styles.personCard}>
-                                                <Text
-                                                    variant="bodyLarge"
-                                                    style={styles.personName}>
-                                                    {witness.name ||
-                                                        "Sin nombre"}
-                                                </Text>
-                                                {witness.age && (
-                                                    <Text variant="bodySmall">
-                                                        Edad: {witness.age}
-                                                    </Text>
-                                                )}
-                                                {witness.dni && (
-                                                    <Text variant="bodySmall">
-                                                        DNI: {witness.dni}
-                                                    </Text>
-                                                )}
-                                                {witness.gender && (
-                                                    <Text variant="bodySmall">
-                                                        Género: {witness.gender}
-                                                    </Text>
-                                                )}
-                                                {witness.description && (
-                                                    <Text
-                                                        variant="bodySmall"
-                                                        style={
-                                                            styles.personDescription
-                                                        }>
-                                                        {witness.description}
-                                                    </Text>
-                                                )}
-                                            </View>
+                                            <List.Item
+                                                key={`w-${index}`}
+                                                title={name}
+                                                description={desc}
+                                                left={props => <List.Icon {...props} icon="account-eye" color={theme.colors.primary} />}
+                                                style={styles.listItem}
+                                            />
                                         );
-                                    },
-                                )}
-                            </>
-                        )}
+                                    })}
+                                </>
+                            )}
+                        </Card.Content>
+                    </Card>
+                )}
+            </ScrollView>
 
-                    {intervention.victims &&
-                        intervention.victims.length > 0 && (
-                            <>
-                                <Text
-                                    variant="titleSmall"
-                                    style={styles.sectionTitle}>
-                                    Víctimas
-                                </Text>
-                                {intervention.victims.map((victim, index) => (
-                                    <View key={index} style={styles.personCard}>
-                                        <Text
-                                            variant="bodyLarge"
-                                            style={styles.personName}>
-                                            {victim.name || "Sin nombre"}
-                                        </Text>
-                                        {victim.age && (
-                                            <Text variant="bodySmall">
-                                                Edad: {victim.age}
-                                            </Text>
-                                        )}
-                                        {victim.dni && (
-                                            <Text variant="bodySmall">
-                                                DNI: {victim.dni}
-                                            </Text>
-                                        )}
-                                        {victim.gender && (
-                                            <Text variant="bodySmall">
-                                                Género: {victim.gender}
-                                            </Text>
-                                        )}
-                                        {victim.description && (
-                                            <Text
-                                                variant="bodySmall"
-                                                style={
-                                                    styles.personDescription
-                                                }>
-                                                {victim.description}
-                                            </Text>
-                                        )}
-                                    </View>
-                                ))}
-                            </>
-                        )}
-                </Card.Content>
-            </Card>
-
-            {intervention.fieldNotes && (
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Title>Notas de Campo</Title>
-                        <Paragraph>{intervention.fieldNotes}</Paragraph>
-                    </Card.Content>
-                </Card>
-            )}
-
-            <View style={styles.buttonContainer}>
-                <Button
-                    mode="contained"
-                    onPress={() =>
-                        navigation.navigate("InterventionForm", {
-                            interventionId: intervention.id,
-                        })
-                    }
-                    icon="pencil"
-                    style={styles.editButton}>
-                    Editar Intervención
-                </Button>
-
-                <Button
-                    mode="contained"
-                    onPress={generateReport}
-                    loading={generating}
-                    disabled={generating}
-                    icon="file-document"
-                    style={styles.reportButton}>
-                    {intervention.report
-                        ? "Regenerar Informe"
-                        : "Generar Informe con IA"}
-                </Button>
-
-                {intervention.report && intervention.id && (
+            {/* Sticky Action Footer */}
+            <Surface style={styles.stickyFooter} elevation={4}>
+                <View style={styles.buttonRow}>
                     <Button
                         mode="outlined"
-                        onPress={() =>
-                            navigation.navigate("Report", {
-                                interventionId: intervention.id,
-                                report: intervention.report,
-                            })
-                        }
-                        icon="eye"
-                        style={styles.viewReportButton}>
-                        Ver Informe Existente
+                        onPress={() => navigation.navigate("InterventionForm", { interventionId: intervention.id })}
+                        icon="pencil"
+                        style={styles.flexButton}
+                    >
+                        Editar
+                    </Button>
+                    <Button
+                        mode="contained"
+                        onPress={generateReport}
+                        loading={generating}
+                        disabled={generating}
+                        icon="file-document-auto"
+                        style={[styles.flexButton, {backgroundColor: theme.colors.primary}]}
+                    >
+                        {intervention.report ? "Regenerar" : "Generar IA"}
+                    </Button>
+                </View>
+                {intervention.report && intervention.id && (
+                    <Button
+                        mode="contained-tonal"
+                        onPress={() => navigation.navigate("Report", { interventionId: intervention.id, report: intervention.report })}
+                        icon="file-eye"
+                        style={styles.viewReportButton}
+                    >
+                        Ver Informe Generado
                     </Button>
                 )}
-            </View>
-        </ScrollView>
+            </Surface>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
+    mainContainer: {
+        flex: 1,
+    },
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+    },
+    scrollContent: {
+        padding: 16,
+        paddingBottom: 120, // Espacio para el footer
+    },
+    centerContent: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     card: {
-        margin: 16,
-        marginBottom: 8,
+        marginBottom: 16,
+        borderRadius: 12,
         backgroundColor: "#FFFFFF",
+        overflow: 'hidden',
     },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
-        alignItems: "center",
+        alignItems: "flex-start",
     },
-    title: {
+    headerTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
         flex: 1,
     },
-    dateChip: {
-        alignSelf: "flex-start",
-        marginTop: 8,
+    headerText: {
+        marginLeft: 12,
+        flex: 1,
     },
-    timelineItem: {
+    title: {
+        fontSize: 22,
+        fontWeight: "bold",
+        lineHeight: 26,
+    },
+    deleteBtn: {
+        margin: 0,
+    },
+    addressRow: {
         flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 4,
-    },
-
-    sectionTitle: {
-        marginTop: 12,
-        marginBottom: 4,
-        color: "#d32f2f",
-    },
-    divider: {
-        marginVertical: 12,
-    },
-    chipContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        marginTop: 4,
-    },
-    chip: {
-        margin: 2,
-    },
-    personCard: {
-        backgroundColor: "#f0f0f0",
-        padding: 12,
-        marginTop: 8,
+        alignItems: "center",
+        marginTop: 16,
+        backgroundColor: "#f5f5f5",
+        padding: 8,
         borderRadius: 8,
     },
-    personName: {
+    transparentIcon: {
+        backgroundColor: "transparent",
+        marginRight: 8,
+    },
+    addressText: {
+        flex: 1,
+        color: "#424242",
+    },
+    sectionTitle: {
+        fontSize: 18,
         fontWeight: "bold",
-        marginBottom: 4,
+        marginBottom: 16,
+        color: "#1a1c1e",
     },
-    personDescription: {
-        color: "#666",
-        marginTop: 4,
-        fontStyle: "italic",
+    
+    // Timeline Styles
+    timelineContainer: {
+        paddingLeft: 8,
+        position: 'relative',
     },
-    victimItem: {
-        backgroundColor: "#f0f0f0",
-        padding: 8,
-        marginTop: 4,
-        borderRadius: 4,
+    timelineLine: {
+        position: 'absolute',
+        left: 22, // 8 (padding) + 14 (half icon size)
+        top: 20,
+        bottom: 20,
+        width: 2,
+        backgroundColor: '#e0e0e0',
     },
-    victimDescription: {
-        color: "#666",
-        marginTop: 2,
+    timelineItem: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        alignItems: 'center',
     },
-    buttonContainer: {
+    timelineIcon: {
+        zIndex: 1,
+    },
+    timelineContent: {
+        marginLeft: 16,
+        flex: 1,
+    },
+    timelineLabel: {
+        color: '#757575',
+    },
+    
+    // Notes
+    notesSurface: {
         padding: 16,
+        borderRadius: 8,
+        backgroundColor: "#fff8e1", // Subtle yellow/warm tint for notes
+        borderLeftWidth: 4,
+        borderLeftColor: "#ffb300",
     },
-    editButton: {
-        backgroundColor: "#1976d2",
-        marginBottom: 8,
+    notesText: {
+        color: "#424242",
+        lineHeight: 22,
     },
-    reportButton: {
-        backgroundColor: "#d32f2f",
-        marginBottom: 8,
+
+    // Lists
+    noPaddingContent: {
+        paddingHorizontal: 0,
+        paddingBottom: 8,
+    },
+    subHeader: {
+        color: "#757575",
+        fontWeight: "bold",
+    },
+    listItem: {
+        paddingLeft: 16,
+        paddingRight: 16,
+    },
+
+    // Footer
+    stickyFooter: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    flexButton: {
+        flex: 1,
+        borderRadius: 8,
     },
     viewReportButton: {
-        borderColor: "#d32f2f",
-    },
-    serviceItem: {
-        backgroundColor: "#f9f9f9",
-        padding: 8,
-        marginTop: 4,
-        borderRadius: 4,
-    },
-    serviceType: {
-        fontWeight: "bold",
-        color: "#d32f2f",
-    },
-    serviceDivider: {
-        marginVertical: 8,
+        marginTop: 12,
+        borderRadius: 8,
     },
 });
 

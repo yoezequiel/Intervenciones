@@ -1,23 +1,24 @@
 import React from "react";
 import { View, StyleSheet, ScrollView, Alert } from "react-native";
-import { Card, Title, Paragraph, Button, Text } from "react-native-paper";
+import { Card, Title, Paragraph, Button, Text, Surface, useTheme } from "react-native-paper";
 import { Share } from "react-native";
 
 const ReportScreen = ({ navigation, route }) => {
     const { report, interventionId } = route.params;
+    const theme = useTheme();
 
     const generatePDF = () => {
         Alert.alert("Exportar Informe", "¿Qué deseas hacer con el informe?", [
             { text: "Cancelar", style: "cancel" },
-            { text: "Compartir", onPress: () => shareReport() },
+            { text: "Compartir Texto", onPress: () => shareReport() },
         ]);
     };
 
     const shareReport = async () => {
         try {
-            const result = await Share.share({
+            await Share.share({
                 title: "Informe de Intervención",
-                message: `Informe de Intervención ID: ${interventionId}\n\n${report}`,
+                message: `--- INFORME DE INTERVENCIÓN ---\nID: ${interventionId}\n\n${report}`,
             });
         } catch (error) {
             Alert.alert("Error", "No se pudo compartir el informe");
@@ -30,54 +31,57 @@ const ReportScreen = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
-            <ScrollView style={styles.scrollView}>
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Title style={styles.title}>Informe Generado</Title>
-                        <Text variant="bodySmall" style={styles.subtitle}>
-                            ID de Intervención: {interventionId}
+        <View style={[styles.container, {backgroundColor: theme.colors.background}]}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                <Surface style={styles.documentSurface} elevation={2}>
+                    <View style={styles.documentHeader}>
+                        <Title style={styles.documentTitle}>INFORME DE INTERVENCIÓN</Title>
+                        <Text variant="labelMedium" style={styles.documentMeta}>
+                            ID DE REGISTRO: {interventionId || "N/A"}
                         </Text>
-                        <Text variant="bodySmall" style={styles.subtitle}>
-                            Generado el:{" "}
-                            {new Date().toLocaleDateString("es-ES")}
+                        <Text variant="labelMedium" style={styles.documentMeta}>
+                            FECHA DE EMISIÓN: {new Date().toLocaleDateString("es-ES")}
                         </Text>
-                    </Card.Content>
-                </Card>
+                        <View style={styles.headerDivider} />
+                    </View>
 
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Paragraph style={styles.reportContent}>
-                            {report}
-                        </Paragraph>
-                    </Card.Content>
-                </Card>
+                    <Paragraph style={styles.reportContent}>
+                        {report}
+                    </Paragraph>
+
+                    <View style={styles.documentFooter}>
+                        <View style={styles.footerDivider} />
+                        <Text variant="labelSmall" style={styles.footerText}>
+                            DOCUMENTO GENERADO POR SISTEMA DE GESTIÓN DE INTERVENCIONES
+                        </Text>
+                    </View>
+                </Surface>
             </ScrollView>
 
-            <View style={styles.buttonContainer}>
-                <Button
-                    mode="contained"
-                    onPress={generatePDF}
-                    icon="share"
-                    style={styles.pdfButton}>
-                    Compartir Informe
-                </Button>
-
-                <Button
-                    mode="outlined"
-                    onPress={copyToClipboard}
-                    icon="content-copy"
-                    style={styles.copyButton}>
-                    Copiar Texto
-                </Button>
-
+            <Surface style={styles.buttonContainer} elevation={4}>
+                <View style={styles.buttonRow}>
+                    <Button
+                        mode="outlined"
+                        onPress={copyToClipboard}
+                        icon="content-copy"
+                        style={styles.actionButton}>
+                        Copiar
+                    </Button>
+                    <Button
+                        mode="contained"
+                        onPress={generatePDF}
+                        icon="share-variant"
+                        style={[styles.actionButton, {backgroundColor: theme.colors.primary}]}>
+                        Compartir
+                    </Button>
+                </View>
                 <Button
                     mode="text"
                     onPress={() => navigation.goBack()}
                     style={styles.backButton}>
-                    Volver
+                    Volver al Detalle
                 </Button>
-            </View>
+            </Surface>
         </View>
     );
 };
@@ -85,47 +89,78 @@ const ReportScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
     },
     scrollView: {
         flex: 1,
     },
-    card: {
-        margin: 16,
-        marginBottom: 8,
+    scrollContent: {
+        padding: 16,
+        paddingBottom: 16,
+    },
+    documentSurface: {
         backgroundColor: "#FFFFFF",
+        padding: 24,
+        borderRadius: 4, // Bordes menos redondeados para simular papel
+        minHeight: 400,
     },
-    title: {
-        color: "#d32f2f",
+    documentHeader: {
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    documentTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        letterSpacing: 1,
+        color: "#1a1c1e",
         marginBottom: 8,
+        textAlign: "center",
     },
-    subtitle: {
-        color: "#666",
-        marginBottom: 4,
+    documentMeta: {
+        color: "#757575",
+        letterSpacing: 0.5,
+    },
+    headerDivider: {
+        height: 2,
+        backgroundColor: "#1a1c1e",
+        width: "100%",
+        marginTop: 16,
     },
     reportContent: {
-        fontFamily: "monospace",
+        fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
         fontSize: 14,
-        lineHeight: 20,
-        backgroundColor: "#f9f9f9",
-        padding: 12,
-        borderRadius: 4,
-        borderLeftWidth: 4,
-        borderLeftColor: "#d32f2f",
+        lineHeight: 24,
+        color: "#212121",
+        textAlign: "justify",
+    },
+    documentFooter: {
+        marginTop: 40,
+        alignItems: "center",
+    },
+    footerDivider: {
+        height: 1,
+        backgroundColor: "#e0e0e0",
+        width: "60%",
+        marginBottom: 8,
+    },
+    footerText: {
+        color: "#9e9e9e",
+        textAlign: "center",
+        fontSize: 10,
     },
     buttonContainer: {
         padding: 16,
         backgroundColor: "#FFFFFF",
-        borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
     },
-    pdfButton: {
-        backgroundColor: "#d32f2f",
+    buttonRow: {
+        flexDirection: "row",
+        gap: 12,
         marginBottom: 8,
     },
-    copyButton: {
-        borderColor: "#d32f2f",
-        marginBottom: 8,
+    actionButton: {
+        flex: 1,
+        borderRadius: 8,
     },
     backButton: {
         marginTop: 4,
