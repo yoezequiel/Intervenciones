@@ -3,18 +3,6 @@ import * as FileSystem from "expo-file-system/legacy";
 
 export const initDatabase = async () => {
     try {
-        // Verificar si el directorio de la base de datos existe
-        const dirInfo = await FileSystem.getInfoAsync(
-            FileSystem.documentDirectory + "SQLite"
-        );
-        if (!dirInfo.exists) {
-            console.log("Creando directorio SQLite");
-            await FileSystem.makeDirectoryAsync(
-                FileSystem.documentDirectory + "SQLite",
-                { intermediates: true }
-            );
-        }
-
         // Abrir o crear la base de datos
         console.log("Abriendo base de datos...");
         const db = await SQLite.openDatabaseAsync("interventions.db");
@@ -51,24 +39,6 @@ export const initDatabase = async () => {
         return db;
     } catch (error) {
         console.error("Error al inicializar la base de datos:", error);
-
-        // En desarrollo, intentar eliminar y recrear la base de datos
-        if (__DEV__) {
-            console.log("Intentando recrear la base de datos...");
-            try {
-                await FileSystem.deleteAsync(
-                    FileSystem.documentDirectory + "SQLite/interventions.db",
-                    { idempotent: true }
-                );
-                return await initDatabase();
-            } catch (deleteError) {
-                console.error(
-                    "Error al recrear la base de datos:",
-                    deleteError
-                );
-            }
-        }
-
         throw error;
     }
 };

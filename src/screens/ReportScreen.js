@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, Alert, Platform } from "react-native";
 import { Card, Title, Paragraph, Button, Text, Surface, useTheme } from "react-native-paper";
 import { Share } from "react-native";
 

@@ -16,16 +16,17 @@ import { InterventionType } from "../types";
 
 const getTypeIcon = (type) => {
     switch (type) {
-        case InterventionType.FIRE:
+        case InterventionType.STRUCTURAL_FIRE:
+        case InterventionType.FOREST_FIRE:
         case "Incendio":
             return "fire";
         case InterventionType.RESCUE:
         case "Rescate":
             return "lifebuoy";
-        case InterventionType.ACCIDENT:
+        case InterventionType.TRAFFIC_ACCIDENT:
         case "Accidente":
             return "car-emergency";
-        case InterventionType.HAZMAT:
+        case InterventionType.OTHER:
         case "Materiales Peligrosos":
             return "biohazard";
         default:
@@ -35,13 +36,14 @@ const getTypeIcon = (type) => {
 
 const getTypeColor = (type, theme) => {
     switch (type) {
-        case InterventionType.FIRE:
+        case InterventionType.STRUCTURAL_FIRE:
+        case InterventionType.FOREST_FIRE:
         case "Incendio":
             return theme.colors.error;
         case InterventionType.RESCUE:
         case "Rescate":
             return theme.colors.primary;
-        case InterventionType.ACCIDENT:
+        case InterventionType.TRAFFIC_ACCIDENT:
         case "Accidente":
             return theme.colors.secondary;
         default:

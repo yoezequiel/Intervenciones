@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import * as SQLite from "expo-sqlite";
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 
 const DatabaseContext = createContext(undefined);
 
@@ -18,21 +18,12 @@ export const DatabaseProvider = ({ children }) => {
     const [isDbReady, setIsDbReady] = useState(false);
     const [error, setError] = useState(null);
 
-    const ensureDirExists = async () => {
-        const dirInfo = await FileSystem.getInfoAsync(
-            FileSystem.documentDirectory + "SQLite"
-        );
-        if (!dirInfo.exists) {
-            await FileSystem.makeDirectoryAsync(
-                FileSystem.documentDirectory + "SQLite",
-                { intermediates: true }
-            );
-        }
-    };
-
-    const initDatabase = async () => {
+    const initDatabase = async (retryCount = 0) => {
         try {
-            await ensureDirExists();
+            // Pequeña pausa si es un reintento para dejar que el runtime respire
+            if (retryCount > 0) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
 
             const database = await SQLite.openDatabaseAsync("interventions.db");
 
@@ -65,15 +56,16 @@ export const DatabaseProvider = ({ children }) => {
             await loadInterventions(database);
             setIsDbReady(true);
         } catch (err) {
-            console.error("Error initializing database:", err);
+            console.error(`Error initializing database (attempt ${retryCount + 1}):`, err);
+            
+            // Si el error es "runtime not ready" o similar, reintentar un par de veces
+            if (retryCount < 2) {
+                console.log("Retrying database initialization...");
+                return await initDatabase(retryCount + 1);
+            }
+
             setError(err);
             setIsDbReady(false);
-            if (__DEV__) {
-                await FileSystem.deleteAsync(
-                    FileSystem.documentDirectory + "SQLite/interventions.db"
-                );
-                await initDatabase();
-            }
         }
     };
 
@@ -82,7 +74,12 @@ export const DatabaseProvider = ({ children }) => {
 
         return () => {
             if (db) {
-                db.closeAsync().catch(console.error);
+                // Usar una función anónima para evitar errores si el objeto no tiene closeAsync en ese momento
+                try {
+                    db.closeSync();
+                } catch (e) {
+                    // Ignorar errores al cerrar
+                }
             }
         };
     }, []);
