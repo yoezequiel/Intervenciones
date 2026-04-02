@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, FlatList } from "react-native";
+import { View, StyleSheet, FlatList, ActivityIndicator, Alert } from "react-native";
 import {
     Card,
     Title,
@@ -9,10 +9,12 @@ import {
     Chip,
     Text,
     Avatar,
+    IconButton,
     useTheme,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
+import { generateInterventionPDF } from "../utils/pdfGenerator";
 
 const getTypeIcon = (type) => {
     switch (type) {
@@ -55,7 +57,19 @@ const HomeScreen = ({ navigation }) => {
     const { interventions } = useDatabase();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState(null);
+    const [generatingPdfId, setGeneratingPdfId] = useState(null);
     const theme = useTheme();
+
+    const handleGeneratePdf = async (intervention) => {
+        setGeneratingPdfId(intervention.id);
+        try {
+            await generateInterventionPDF(intervention);
+        } catch (error) {
+            Alert.alert("Error", "No se pudo generar el PDF");
+        } finally {
+            setGeneratingPdfId(null);
+        }
+    };
 
     const filteredInterventions = interventions.filter((intervention) => {
         const matchesSearch =
@@ -82,6 +96,7 @@ const HomeScreen = ({ navigation }) => {
     const renderIntervention = ({ item }) => {
         const iconName = getTypeIcon(item.type);
         const iconColor = getTypeColor(item.type, theme);
+        const isGeneratingThis = generatingPdfId === item.id;
 
         return (
             <Card
@@ -98,9 +113,22 @@ const HomeScreen = ({ navigation }) => {
                             <Avatar.Icon size={36} icon={iconName} style={{backgroundColor: iconColor}} color="white" />
                             <Title style={styles.cardTitle}>{item.type}</Title>
                         </View>
-                        <Chip mode="flat" compact style={styles.dateChip} textStyle={styles.dateChipText}>
-                            {formatDate(item.createdAt)}
-                        </Chip>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            {isGeneratingThis ? (
+                                <ActivityIndicator size="small" color={theme.colors.primary} style={{marginRight: 8}} />
+                            ) : (
+                                <IconButton 
+                                    icon="file-pdf-box" 
+                                    size={24} 
+                                    iconColor={theme.colors.primary} 
+                                    onPress={() => handleGeneratePdf(item)}
+                                    style={{margin: 0, padding: 0}}
+                                />
+                            )}
+                            <Chip mode="flat" compact style={styles.dateChip} textStyle={styles.dateChipText}>
+                                {formatDate(item.createdAt)}
+                            </Chip>
+                        </View>
                     </View>
                     
                     <View style={styles.cardBody}>

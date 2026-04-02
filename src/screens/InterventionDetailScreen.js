@@ -17,6 +17,7 @@ import {
 import { useDatabase } from "../context/DatabaseContext";
 import { API_KEY } from "../../env";
 import { InterventionType } from "../types";
+import { generateInterventionPDF } from "../utils/pdfGenerator";
 
 const getTypeIcon = (type) => {
     switch (type) {
@@ -59,6 +60,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention } =
         useDatabase();
     const [generating, setGenerating] = useState(false);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
     const theme = useTheme();
 
     const intervention = getIntervention(route.params.id);
@@ -71,6 +73,17 @@ const InterventionDetailScreen = ({ navigation, route }) => {
             </View>
         );
     }
+
+    const handleGeneratePdf = async () => {
+        setGeneratingPdf(true);
+        try {
+            await generateInterventionPDF(intervention);
+        } catch (error) {
+            Alert.alert("Error", "No se pudo generar el PDF");
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString("es-ES", {
@@ -328,7 +341,15 @@ INSTRUCCIONES FINALES:
                                     </Text>
                                 </View>
                             </View>
-                            <IconButton icon="delete" iconColor={theme.colors.error} onPress={handleDelete} style={styles.deleteBtn} />
+                            <View style={{flexDirection: 'row'}}>
+                                <IconButton 
+                                    icon="file-pdf-box" 
+                                    iconColor={theme.colors.primary} 
+                                    onPress={handleGeneratePdf} 
+                                    disabled={generatingPdf}
+                                />
+                                <IconButton icon="delete" iconColor={theme.colors.error} onPress={handleDelete} style={styles.deleteBtn} />
+                            </View>
                         </View>
                         
                         <View style={styles.addressRow}>
@@ -489,6 +510,17 @@ INSTRUCCIONES FINALES:
                         Ver Informe Generado
                     </Button>
                 )}
+                <Button
+                    mode="outlined"
+                    onPress={handleGeneratePdf}
+                    loading={generatingPdf}
+                    disabled={generatingPdf}
+                    icon="file-pdf-box"
+                    style={styles.viewReportButton}
+                    textColor={theme.colors.primary}
+                >
+                    Exportar PDF Profesional
+                </Button>
             </Surface>
         </View>
     );
