@@ -31,12 +31,15 @@ export const generateInterventionPDF = async (intervention) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        @page {
+            margin: 20mm;
+        }
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
             color: #333;
             line-height: 1.6;
             margin: 0;
-            padding: 40px;
+            padding: 0;
         }
         .header {
             border-bottom: 2px solid #b71c1c;
@@ -145,9 +148,6 @@ export const generateInterventionPDF = async (intervention) => {
             text-align: center;
             padding-top: 5px;
             font-size: 12px;
-        }
-        @media print {
-            body { padding: 0; }
         }
     </style>
 </head>
@@ -265,6 +265,19 @@ export const generateInterventionPDF = async (intervention) => {
         <div class="section-title">Resumen de Actuación (IA)</div>
         <div style="font-style: italic; font-size: 14px; text-align: justify">
             ${intervention.report}
+        </div>
+    </div>
+    ` : ''}
+
+    ${intervention.photos && intervention.photos.length > 0 ? `
+    <div class="section">
+        <div class="section-title">Evidencia Fotográfica</div>
+        <div class="photo-grid">
+            ${intervention.photos.map(uri => `
+                <div class="photo-item">
+                    <img src="${uri}" class="photo-img" />
+                </div>
+            `).join('')}
         </div>
     </div>
     ` : ''}
