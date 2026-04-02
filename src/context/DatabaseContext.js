@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import * as SQLite from "expo-sqlite";
-import * as FileSystem from "expo-file-system";
 
 const DatabaseContext = createContext(undefined);
 
@@ -46,11 +45,24 @@ export const DatabaseProvider = ({ children }) => {
           fieldNotes TEXT,
           audioNotes TEXT,
           sketches TEXT,
+          photos TEXT,
           report TEXT,
           createdAt TEXT NOT NULL,
           updatedAt TEXT NOT NULL
         );
       `);
+
+            // Check if photos column exists, if not, add it (simple migration)
+            try {
+                const tableInfo = await database.getAllAsync("PRAGMA table_info(interventions)");
+                const hasPhotos = tableInfo.some(column => column.name === 'photos');
+                if (!hasPhotos) {
+                    await database.execAsync("ALTER TABLE interventions ADD COLUMN photos TEXT");
+                    console.log("Added photos column to interventions table");
+                }
+            } catch (migrationError) {
+                console.warn("Migration error (might be already up to date):", migrationError);
+            }
 
             setDb(database);
             await loadInterventions(database);
@@ -74,7 +86,6 @@ export const DatabaseProvider = ({ children }) => {
 
         return () => {
             if (db) {
-                // Usar una función anónima para evitar errores si el objeto no tiene closeAsync en ese momento
                 try {
                     db.closeSync();
                 } catch (e) {
@@ -98,6 +109,7 @@ export const DatabaseProvider = ({ children }) => {
                 victims: safeJsonParse(row.victims, []),
                 audioNotes: safeJsonParse(row.audioNotes, []),
                 sketches: safeJsonParse(row.sketches, []),
+                photos: safeJsonParse(row.photos, []),
             }));
             setInterventions(parsedInterventions);
         } catch (err) {
@@ -132,6 +144,7 @@ export const DatabaseProvider = ({ children }) => {
                 victims: safeJsonParse(row.victims, []),
                 audioNotes: safeJsonParse(row.audioNotes, []),
                 sketches: safeJsonParse(row.sketches, []),
+                photos: safeJsonParse(row.photos, []),
             }));
             setInterventions(parsedInterventions);
         } catch (error) {
@@ -148,8 +161,8 @@ export const DatabaseProvider = ({ children }) => {
                 `INSERT INTO interventions (
           callTime, departureTime, returnTime, address, type,
           otherServices, witnesses, victims, fieldNotes,
-          audioNotes, sketches, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          audioNotes, sketches, photos, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 intervention.callTime || null,
                 intervention.departureTime || null,
                 intervention.returnTime || null,
@@ -161,6 +174,7 @@ export const DatabaseProvider = ({ children }) => {
                 intervention.fieldNotes || null,
                 JSON.stringify(intervention.audioNotes || []),
                 JSON.stringify(intervention.sketches || []),
+                JSON.stringify(intervention.photos || []),
                 now,
                 now
             );
@@ -183,8 +197,8 @@ export const DatabaseProvider = ({ children }) => {
                 field === "otherServices" ||
                 field === "witnesses" ||
                 field === "victims" ||
-                field === "audioNotes" ||
-                field === "sketches"
+                // audioNotes, sketches, and photos are arrays that need to be stringified
+                ["audioNotes", "sketches", "photos"].includes(field)
             ) {
                 return JSON.stringify(value || []);
             }

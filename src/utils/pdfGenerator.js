@@ -95,6 +95,23 @@ export const generateInterventionPDF = async (intervention) => {
             min-height: 100px;
             white-space: pre-wrap;
         }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .photo-item {
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .photo-img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+        }
         table {
             width: 100%;
             border-collapse: collapse;

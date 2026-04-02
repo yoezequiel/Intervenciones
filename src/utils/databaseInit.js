@@ -29,6 +29,7 @@ export const initDatabase = async () => {
         fieldNotes TEXT,
         audioNotes TEXT,
         sketches TEXT,
+        photos TEXT,
         report TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL

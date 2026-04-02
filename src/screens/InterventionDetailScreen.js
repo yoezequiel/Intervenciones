@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, Alert, Image, Modal, TouchableWithoutFeedback, TouchableOpacity } from "react-native";
 import {
     Card,
     Title,
@@ -61,6 +61,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
         useDatabase();
     const [generating, setGenerating] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
     const theme = useTheme();
 
     const intervention = getIntervention(route.params.id);
@@ -116,14 +117,8 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const generateReport = async () => {
         setGenerating(true);
 
-        console.log("API_KEY disponible:", API_KEY ? "SÍ" : "NO");
-
         if (!API_KEY || API_KEY === "undefined" || API_KEY === "") {
             console.error("API_KEY no está configurada correctamente");
-            Alert.alert(
-                "Error de configuración",
-                "La clave de API no está configurada. La aplicación usará la generación local de informes.",
-            );
         }
 
         try {
@@ -255,14 +250,6 @@ INSTRUCCIONES FINALES:
             } catch (apiError) {
                 console.error("Error con API de Gemini, usando generación local:", apiError.message);
 
-                if (API_KEY && API_KEY !== "undefined" && API_KEY !== "") {
-                    Alert.alert(
-                        "Aviso",
-                        "No se pudo conectar con la IA. Se generará un informe básico.",
-                        [{ text: "Entendido" }],
-                    );
-                }
-
                 const timeInfo = intervention.callTime
                     ? `el ${formatDate(intervention.createdAt)} a las ${intervention.callTime}`
                     : `el ${formatDate(intervention.createdAt)}`;
@@ -393,6 +380,24 @@ INSTRUCCIONES FINALES:
                     </Card.Content>
                 </Card>
 
+                {/* Multimedia Evidence */}
+                {intervention.photos && intervention.photos.length > 0 && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content>
+                            <Title style={styles.sectionTitle}>Evidencia Multimedia</Title>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoList}>
+                                {intervention.photos.map((uri, index) => (
+                                    <TouchableOpacity key={index} onPress={() => setSelectedImage(uri)}>
+                                        <Surface style={styles.photoWrapper} elevation={2}>
+                                            <Image source={{ uri }} style={styles.photo} />
+                                        </Surface>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </Card.Content>
+                    </Card>
+                )}
+
                 {/* Field Notes */}
                 {intervention.fieldNotes && (
                     <Card style={styles.card} mode="elevated" elevation={1}>
@@ -522,6 +527,33 @@ INSTRUCCIONES FINALES:
                     Exportar PDF Profesional
                 </Button>
             </Surface>
+
+            {/* Image Viewer Modal */}
+            <Modal
+                visible={!!selectedImage}
+                transparent={true}
+                onRequestClose={() => setSelectedImage(null)}
+                animationType="fade"
+            >
+                <TouchableWithoutFeedback onPress={() => setSelectedImage(null)}>
+                    <View style={styles.modalContainer}>
+                        <IconButton
+                            icon="close"
+                            iconColor="white"
+                            size={30}
+                            style={styles.closeButton}
+                            onPress={() => setSelectedImage(null)}
+                        />
+                        {selectedImage && (
+                            <Image
+                                source={{ uri: selectedImage }}
+                                style={styles.fullImage}
+                                resizeMode="contain"
+                            />
+                        )}
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </View>
     );
 };
@@ -535,7 +567,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 120, // Espacio para el footer
+        paddingBottom: 220, // Aumentado para evitar que los botones tapen el contenido
     },
     centerContent: {
         justifyContent: 'center',
@@ -599,7 +631,7 @@ const styles = StyleSheet.create({
     },
     timelineLine: {
         position: 'absolute',
-        left: 22, // 8 (padding) + 14 (half icon size)
+        left: 22,
         top: 20,
         bottom: 20,
         width: 2,
@@ -625,7 +657,7 @@ const styles = StyleSheet.create({
     notesSurface: {
         padding: 16,
         borderRadius: 8,
-        backgroundColor: "#fff8e1", // Subtle yellow/warm tint for notes
+        backgroundColor: "#fff8e1",
         borderLeftWidth: 4,
         borderLeftColor: "#ffb300",
     },
@@ -670,6 +702,37 @@ const styles = StyleSheet.create({
     viewReportButton: {
         marginTop: 12,
         borderRadius: 8,
+    },
+    // Multimedia styles
+    photoList: {
+        flexDirection: 'row',
+        paddingVertical: 4,
+    },
+    photoWrapper: {
+        marginRight: 12,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    photo: {
+        width: 120,
+        height: 120,
+        resizeMode: 'cover',
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullImage: {
+        width: '100%',
+        height: '80%',
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        zIndex: 1,
     },
 });
 

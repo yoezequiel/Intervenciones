@@ -24,6 +24,8 @@ import {
 import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import AccordionSection from "../components/AccordionSection";
+import MultimediaSection from "../components/MultimediaSection";
+import * as Location from "expo-location";
 
 // Componente memoizado para los botones de tiempo
 const TimeButton = memo(({ label, value, onChangeText, getCurrentTime, icon }) => (
@@ -157,7 +159,44 @@ const InterventionFormScreen = ({ navigation, route }) => {
     const [editingVictimIndex, setEditingVictimIndex] = useState(null);
 
     const [fieldNotes, setFieldNotes] = useState(existingIntervention?.fieldNotes || "");
+    const [photos, setPhotos] = useState(existingIntervention?.photos || []);
     const [loading, setLoading] = useState(false);
+    const [locationLoading, setLocationLoading] = useState(false);
+
+    const handleGetCurrentLocation = useCallback(async () => {
+        setLocationLoading(true);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert("Permiso denegado", "Se necesita permiso de ubicación para obtener la dirección actual.");
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
+            });
+
+            const reverseGeocode = await Location.reverseGeocodeAsync({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+            });
+
+            if (reverseGeocode.length > 0) {
+                const { street, streetNumber, city, region } = reverseGeocode[0];
+                const addressParts = [street, streetNumber, city, region].filter(Boolean);
+                const addressStr = addressParts.join(", ");
+                
+                setAddress(addressStr || `${location.coords.latitude}, ${location.coords.longitude}`);
+            } else {
+                setAddress(`${location.coords.latitude}, ${location.coords.longitude}`);
+            }
+        } catch (error) {
+            console.error("Error obteniendo ubicación:", error);
+            Alert.alert("Error", "No se pudo obtener la ubicación actual.");
+        } finally {
+            setLocationLoading(false);
+        }
+    }, []);
 
     const serviceTypes = useMemo(() => ["Policía", "Ambulancia", "Grúa", "Electricidad", "Gas", "Bomberos de otro cuartel", "Otro"], []);
     const genderOptions = useMemo(() => [
@@ -282,6 +321,7 @@ const InterventionFormScreen = ({ navigation, route }) => {
             const interventionData = {
                 callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes,
                 audioNotes: existingIntervention?.audioNotes || [], sketches: existingIntervention?.sketches || [],
+                photos,
             };
 
             if (isEditing) {
@@ -296,7 +336,7 @@ const InterventionFormScreen = ({ navigation, route }) => {
         } finally {
             setLoading(false);
         }
-    }, [addIntervention, updateIntervention, isEditing, interventionId, existingIntervention, callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes, navigation]);
+    }, [addIntervention, updateIntervention, isEditing, interventionId, existingIntervention, callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes, photos, navigation]);
 
     return (
         <KeyboardAvoidingView
@@ -336,7 +376,14 @@ const InterventionFormScreen = ({ navigation, route }) => {
                         mode="outlined"
                         multiline
                         style={styles.input}
-                        left={<TextInput.Icon icon="map-marker" />}
+                        left={
+                            <TextInput.Icon 
+                                icon={locationLoading ? "loading" : "map-marker"} 
+                                onPress={handleGetCurrentLocation}
+                                disabled={locationLoading}
+                                color={locationLoading ? theme.colors.primary : theme.colors.error}
+                            />
+                        }
                     />
                 </AccordionSection>
 
@@ -496,6 +543,13 @@ const InterventionFormScreen = ({ navigation, route }) => {
                         style={styles.input}
                     />
                 </AccordionSection>
+
+                <AccordionSection title="Multimedia (Evidencia Técnica)" icon="camera-outline">
+                    <MultimediaSection 
+                        photos={photos} 
+                        onPhotosChange={setPhotos} 
+                    />
+                </AccordionSection>
             </ScrollView>
 
             <Surface style={styles.stickyFooter} elevation={4}>
@@ -523,7 +577,7 @@ const styles = StyleSheet.create({
     scrollViewContent: {
         flexGrow: 1,
         paddingTop: 16,
-        paddingBottom: 100, // Espacio para el sticky footer
+        paddingBottom: 160, // Aumentado para que el footer no tape el contenido
     },
     input: {
         marginBottom: 12,
