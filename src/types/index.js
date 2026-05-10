@@ -6,3 +6,9 @@ export const InterventionType = {
   FALSE_ALARM: 'Alarma falsa',
   OTHER: 'Otro'
 };
+
+export const CommunicationStatus = {
+  RECEIVED: 'recibido',
+  REPORTED: 'reportado',
+  DISPATCHED: 'desplazamiento',
+};

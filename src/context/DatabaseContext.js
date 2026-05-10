@@ -13,13 +13,24 @@ export const useDatabase = () => {
 
 export const DatabaseProvider = ({ children }) => {
     const [interventions, setInterventions] = useState([]);
+    const [communications, setCommunications] = useState([]);
+    const [settingsMap, setSettingsMap] = useState({});
     const [db, setDb] = useState(null);
     const [isDbReady, setIsDbReady] = useState(false);
     const [error, setError] = useState(null);
 
+    const safeJsonParse = (str, defaultValue = []) => {
+        try {
+            if (!str || str === "null" || str === "undefined") return defaultValue;
+            return JSON.parse(str);
+        } catch (e) {
+            console.warn("Error parsing JSON:", e);
+            return defaultValue;
+        }
+    };
+
     const initDatabase = async (retryCount = 0) => {
         try {
-            // Pequeña pausa si es un reintento para dejar que el runtime respire
             if (retryCount > 0) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
@@ -32,50 +43,80 @@ export const DatabaseProvider = ({ children }) => {
             }
 
             await database.execAsync(`
-        CREATE TABLE IF NOT EXISTS interventions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          callTime TEXT,
-          departureTime TEXT,
-          returnTime TEXT,
-          address TEXT,
-          type TEXT,
-          otherServices TEXT,
-          witnesses TEXT,
-          victims TEXT,
-          fieldNotes TEXT,
-          audioNotes TEXT,
-          sketches TEXT,
-          photos TEXT,
-          report TEXT,
-          createdAt TEXT NOT NULL,
-          updatedAt TEXT NOT NULL
-        );
-      `);
+                CREATE TABLE IF NOT EXISTS interventions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    callTime TEXT,
+                    departureTime TEXT,
+                    returnTime TEXT,
+                    address TEXT,
+                    type TEXT,
+                    otherServices TEXT,
+                    witnesses TEXT,
+                    victims TEXT,
+                    fieldNotes TEXT,
+                    audioNotes TEXT,
+                    sketches TEXT,
+                    photos TEXT,
+                    report TEXT,
+                    communicationId INTEGER,
+                    createdAt TEXT NOT NULL,
+                    updatedAt TEXT NOT NULL
+                );
+            `);
 
-            // Check if photos column exists, if not, add it (simple migration)
-            try {
-                const tableInfo = await database.getAllAsync("PRAGMA table_info(interventions)");
-                const hasPhotos = tableInfo.some(column => column.name === 'photos');
-                if (!hasPhotos) {
-                    await database.execAsync("ALTER TABLE interventions ADD COLUMN photos TEXT");
-                    console.log("Added photos column to interventions table");
-                }
-            } catch (migrationError) {
-                console.warn("Migration error (might be already up to date):", migrationError);
+            // Migrations for interventions table
+            const interventionInfo = await database.getAllAsync("PRAGMA table_info(interventions)");
+            const hasPhotos = interventionInfo.some(col => col.name === 'photos');
+            if (!hasPhotos) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN photos TEXT");
             }
+            const hasCommunicationId = interventionInfo.some(col => col.name === 'communicationId');
+            if (!hasCommunicationId) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN communicationId INTEGER");
+            }
+            const hasLatitude = interventionInfo.some(col => col.name === 'latitude');
+            if (!hasLatitude) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN latitude REAL");
+            }
+            const hasLongitude = interventionInfo.some(col => col.name === 'longitude');
+            if (!hasLongitude) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN longitude REAL");
+            }
+
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS communications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    callerName TEXT,
+                    callerPhone TEXT,
+                    time TEXT NOT NULL,
+                    address TEXT,
+                    incidentType TEXT,
+                    status TEXT NOT NULL DEFAULT 'recibido',
+                    notes TEXT,
+                    interventionId INTEGER,
+                    createdAt TEXT NOT NULL,
+                    updatedAt TEXT NOT NULL
+                );
+            `);
+
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                );
+            `);
 
             setDb(database);
             await loadInterventions(database);
+            await loadCommunications(database);
+            await loadSettings(database);
             setIsDbReady(true);
         } catch (err) {
             console.error(`Error initializing database (attempt ${retryCount + 1}):`, err);
-            
-            // Si el error es "runtime not ready" o similar, reintentar un par de veces
             if (retryCount < 2) {
                 console.log("Retrying database initialization...");
                 return await initDatabase(retryCount + 1);
             }
-
             setError(err);
             setIsDbReady(false);
         }
@@ -83,26 +124,20 @@ export const DatabaseProvider = ({ children }) => {
 
     useEffect(() => {
         initDatabase();
-
         return () => {
             if (db) {
-                try {
-                    db.closeSync();
-                } catch (e) {
-                    // Ignorar errores al cerrar
-                }
+                try { db.closeSync(); } catch (e) {}
             }
         };
     }, []);
 
     const loadInterventions = async (database) => {
         if (!database) return;
-
         try {
             const result = await database.getAllAsync(
                 "SELECT * FROM interventions ORDER BY createdAt DESC"
             );
-            const parsedInterventions = result.map((row) => ({
+            setInterventions(result.map(row => ({
                 ...row,
                 otherServices: safeJsonParse(row.otherServices, []),
                 witnesses: safeJsonParse(row.witnesses, []),
@@ -110,8 +145,7 @@ export const DatabaseProvider = ({ children }) => {
                 audioNotes: safeJsonParse(row.audioNotes, []),
                 sketches: safeJsonParse(row.sketches, []),
                 photos: safeJsonParse(row.photos, []),
-            }));
-            setInterventions(parsedInterventions);
+            })));
         } catch (err) {
             console.error("Error loading interventions:", err);
             setInterventions([]);
@@ -119,50 +153,54 @@ export const DatabaseProvider = ({ children }) => {
         }
     };
 
-    const safeJsonParse = (str, defaultValue = []) => {
+    const loadCommunications = async (database) => {
+        if (!database) return;
         try {
-            if (!str || str === "null" || str === "undefined")
-                return defaultValue;
-            return JSON.parse(str);
-        } catch (e) {
-            console.warn("Error parsing JSON:", e);
-            return defaultValue;
+            const result = await database.getAllAsync(
+                "SELECT * FROM communications ORDER BY createdAt DESC"
+            );
+            setCommunications(result);
+        } catch (err) {
+            console.error("Error loading communications:", err);
+            setCommunications([]);
+        }
+    };
+
+    const loadSettings = async (database) => {
+        if (!database) return;
+        try {
+            const rows = await database.getAllAsync("SELECT key, value FROM settings");
+            const map = {};
+            rows.forEach(row => { map[row.key] = row.value; });
+            setSettingsMap(map);
+        } catch (err) {
+            console.error("Error loading settings:", err);
         }
     };
 
     const refreshInterventions = async () => {
         if (!db) return;
-
-        try {
-            const result = await db.getAllAsync(
-                "SELECT * FROM interventions ORDER BY createdAt DESC"
-            );
-            const parsedInterventions = result.map((row) => ({
-                ...row,
-                otherServices: safeJsonParse(row.otherServices, []),
-                witnesses: safeJsonParse(row.witnesses, []),
-                victims: safeJsonParse(row.victims, []),
-                audioNotes: safeJsonParse(row.audioNotes, []),
-                sketches: safeJsonParse(row.sketches, []),
-                photos: safeJsonParse(row.photos, []),
-            }));
-            setInterventions(parsedInterventions);
-        } catch (error) {
-            console.error("Error fetching interventions:", error);
-        }
+        await loadInterventions(db);
     };
+
+    const refreshCommunications = async () => {
+        if (!db) return;
+        await loadCommunications(db);
+    };
+
+    // ── Interventions CRUD ──────────────────────────────────────────────────
 
     const addIntervention = async (intervention) => {
         if (!db || !isDbReady) throw new Error("Database not ready");
-
         const now = new Date().toISOString();
         try {
-            await db.runAsync(
+            const result = await db.runAsync(
                 `INSERT INTO interventions (
-          callTime, departureTime, returnTime, address, type,
-          otherServices, witnesses, victims, fieldNotes,
-          audioNotes, sketches, photos, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    callTime, departureTime, returnTime, address, type,
+                    otherServices, witnesses, victims, fieldNotes,
+                    audioNotes, sketches, photos, communicationId,
+                    latitude, longitude, createdAt, updatedAt
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 intervention.callTime || null,
                 intervention.departureTime || null,
                 intervention.returnTime || null,
@@ -175,10 +213,14 @@ export const DatabaseProvider = ({ children }) => {
                 JSON.stringify(intervention.audioNotes || []),
                 JSON.stringify(intervention.sketches || []),
                 JSON.stringify(intervention.photos || []),
+                intervention.communicationId || null,
+                intervention.latitude ?? null,
+                intervention.longitude ?? null,
                 now,
                 now
             );
             await loadInterventions(db);
+            return result.lastInsertRowId;
         } catch (err) {
             console.error("Error adding intervention:", err);
             throw err;
@@ -187,29 +229,20 @@ export const DatabaseProvider = ({ children }) => {
 
     const updateIntervention = async (id, updates) => {
         if (!db || !isDbReady) throw new Error("Database not ready");
-
         const now = new Date().toISOString();
-        const fields = Object.keys(updates).filter((key) => key !== "id");
-        const setClause = fields.map((field) => `${field} = ?`).join(", ");
-        const values = fields.map((field) => {
+        const fields = Object.keys(updates).filter(key => key !== "id");
+        const setClause = fields.map(field => `${field} = ?`).join(", ");
+        const values = fields.map(field => {
             const value = updates[field];
-            if (
-                field === "otherServices" ||
-                field === "witnesses" ||
-                field === "victims" ||
-                // audioNotes, sketches, and photos are arrays that need to be stringified
-                ["audioNotes", "sketches", "photos"].includes(field)
-            ) {
+            if (["otherServices", "witnesses", "victims", "audioNotes", "sketches", "photos"].includes(field)) {
                 return JSON.stringify(value || []);
             }
-            return value || null;
+            return value ?? null;
         });
-
         try {
-            const params = [...values, now, id];
             await db.runAsync(
                 `UPDATE interventions SET ${setClause}, updatedAt = ? WHERE id = ?`,
-                ...params
+                ...values, now, id
             );
             await loadInterventions(db);
         } catch (err) {
@@ -220,7 +253,6 @@ export const DatabaseProvider = ({ children }) => {
 
     const deleteIntervention = async (id) => {
         if (!db || !isDbReady) throw new Error("Database not ready");
-
         try {
             await db.runAsync("DELETE FROM interventions WHERE id = ?", id);
             await loadInterventions(db);
@@ -232,23 +264,108 @@ export const DatabaseProvider = ({ children }) => {
 
     const getIntervention = (id) => {
         if (!id) return null;
-        return interventions.find(
-            (intervention) => String(intervention.id) === String(id)
+        return interventions.find(i => String(i.id) === String(id));
+    };
+
+    // ── Communications CRUD ─────────────────────────────────────────────────
+
+    const addCommunication = async (data) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
+        const now = new Date().toISOString();
+        try {
+            const result = await db.runAsync(
+                `INSERT INTO communications (
+                    callerName, callerPhone, time, address, incidentType,
+                    status, notes, interventionId, createdAt, updatedAt
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                data.callerName || null,
+                data.callerPhone || null,
+                data.time || now.slice(11, 16),
+                data.address || null,
+                data.incidentType || null,
+                data.status || 'recibido',
+                data.notes || null,
+                data.interventionId || null,
+                now,
+                now
+            );
+            await loadCommunications(db);
+            return result.lastInsertRowId;
+        } catch (err) {
+            console.error("Error adding communication:", err);
+            throw err;
+        }
+    };
+
+    const updateCommunication = async (id, updates) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
+        const now = new Date().toISOString();
+        const fields = Object.keys(updates).filter(key => key !== "id");
+        const setClause = fields.map(field => `${field} = ?`).join(", ");
+        const values = fields.map(field => updates[field] ?? null);
+        try {
+            await db.runAsync(
+                `UPDATE communications SET ${setClause}, updatedAt = ? WHERE id = ?`,
+                ...values, now, id
+            );
+            await loadCommunications(db);
+        } catch (err) {
+            console.error("Error updating communication:", err);
+            throw err;
+        }
+    };
+
+    const deleteCommunication = async (id) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
+        try {
+            await db.runAsync("DELETE FROM communications WHERE id = ?", id);
+            await loadCommunications(db);
+        } catch (err) {
+            console.error("Error deleting communication:", err);
+            throw err;
+        }
+    };
+
+    const getCommunication = (id) => {
+        if (!id) return null;
+        return communications.find(c => String(c.id) === String(id));
+    };
+
+    // ── Settings ────────────────────────────────────────────────────────────
+
+    const getSetting = (key, defaultValue = null) => {
+        return settingsMap[key] ?? defaultValue;
+    };
+
+    const setSetting = async (key, value) => {
+        if (!db || !isDbReady) throw new Error("Database not ready");
+        await db.runAsync(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            key,
+            String(value)
         );
+        setSettingsMap(prev => ({ ...prev, [key]: String(value) }));
     };
 
     return (
-        <DatabaseContext.Provider
-            value={{
-                interventions,
-                isDbReady,
-                error,
-                refreshInterventions,
-                addIntervention,
-                updateIntervention,
-                deleteIntervention,
-                getIntervention,
-            }}>
+        <DatabaseContext.Provider value={{
+            interventions,
+            communications,
+            isDbReady,
+            error,
+            refreshInterventions,
+            refreshCommunications,
+            addIntervention,
+            updateIntervention,
+            deleteIntervention,
+            getIntervention,
+            addCommunication,
+            updateCommunication,
+            deleteCommunication,
+            getCommunication,
+            getSetting,
+            setSetting,
+        }}>
             {children}
         </DatabaseContext.Provider>
     );

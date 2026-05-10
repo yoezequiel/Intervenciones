@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet, ScrollView, Alert, Platform } from "react-native";
 import { Card, Title, Paragraph, Button, Text, Surface, useTheme } from "react-native-paper";
 import { Share } from "react-native";
@@ -6,6 +6,7 @@ import { Share } from "react-native";
 const ReportScreen = ({ navigation, route }) => {
     const { report, interventionId } = route.params;
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const generatePDF = () => {
         Alert.alert("Exportar Informe", "¿Qué deseas hacer con el informe?", [
@@ -86,7 +87,7 @@ const ReportScreen = ({ navigation, route }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -98,9 +99,9 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
     },
     documentSurface: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: theme.colors.surface,
         padding: 24,
-        borderRadius: 4, // Bordes menos redondeados para simular papel
+        borderRadius: 4,
         minHeight: 400,
     },
     documentHeader: {
@@ -111,17 +112,17 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         letterSpacing: 1,
-        color: "#1a1c1e",
+        color: theme.colors.onSurface,
         marginBottom: 8,
         textAlign: "center",
     },
     documentMeta: {
-        color: "#757575",
+        color: theme.colors.onSurfaceVariant,
         letterSpacing: 0.5,
     },
     headerDivider: {
         height: 2,
-        backgroundColor: "#1a1c1e",
+        backgroundColor: theme.colors.onSurface,
         width: "100%",
         marginTop: 16,
     },
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
         fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
         fontSize: 14,
         lineHeight: 24,
-        color: "#212121",
+        color: theme.colors.onSurface,
         textAlign: "justify",
     },
     documentFooter: {
@@ -138,18 +139,18 @@ const styles = StyleSheet.create({
     },
     footerDivider: {
         height: 1,
-        backgroundColor: "#e0e0e0",
+        backgroundColor: theme.colors.outlineVariant,
         width: "60%",
         marginBottom: 8,
     },
     footerText: {
-        color: "#9e9e9e",
+        color: theme.colors.onSurfaceVariant,
         textAlign: "center",
         fontSize: 10,
     },
     buttonContainer: {
         padding: 16,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: theme.colors.surface,
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
     },

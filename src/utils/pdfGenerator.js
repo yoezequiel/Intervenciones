@@ -7,7 +7,7 @@ import { Platform } from "react-native";
  * @param {Object} intervention - El objeto de la intervención
  * @returns {Promise<void>}
  */
-export const generateInterventionPDF = async (intervention) => {
+export const generateInterventionPDF = async (intervention, communication = null) => {
     try {
         const formatDate = (dateString) => {
             if (!dateString) return "No especificada";
@@ -149,6 +149,35 @@ export const generateInterventionPDF = async (intervention) => {
             padding-top: 5px;
             font-size: 12px;
         }
+        .comm-section-title {
+            background-color: #e3f2fd;
+            padding: 5px 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1565C0;
+            border-left: 4px solid #1565C0;
+            margin-bottom: 10px;
+        }
+        .comm-badge {
+            display: inline-block;
+            background-color: #1565C0;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .comm-notes-box {
+            background-color: #e8f4fd;
+            border: 1px solid #bbdefb;
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -176,6 +205,40 @@ export const generateInterventionPDF = async (intervention) => {
             </div>
         </div>
     </div>
+
+    ${communication ? `
+    <div class="section">
+        <div class="comm-section-title">Comunicación de Origen</div>
+        <span class="comm-badge">Ref. Comunicación N° ${communication.id}</span>
+        <div class="grid">
+            <div class="info-item">
+                <span class="label">Llamante</span>
+                <span class="value">${communication.callerName || 'No registrado'}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Teléfono</span>
+                <span class="value">${communication.callerPhone || 'No registrado'}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Hora del Llamado</span>
+                <span class="value">${communication.time || '--:--'}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Tipo Reportado</span>
+                <span class="value">${communication.incidentType || 'Sin definir'}</span>
+            </div>
+            ${communication.address ? `
+            <div class="info-item" style="grid-column: span 2">
+                <span class="label">Dirección Reportada</span>
+                <span class="value">${communication.address}</span>
+            </div>
+            ` : ''}
+        </div>
+        ${communication.notes ? `
+        <div class="comm-notes-box"><strong>Observaciones:</strong> ${communication.notes}</div>
+        ` : ''}
+    </div>
+    ` : ''}
 
     <div class="section">
         <div class="section-title">Cronología de Tiempos</div>

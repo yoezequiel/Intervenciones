@@ -1,4 +1,4 @@
-import { MD3LightTheme } from "react-native-paper";
+import { MD3LightTheme, MD3DarkTheme } from "react-native-paper";
 
 /**
  * Tema bomberil personalizado (Modern Card-Based MD3)
@@ -58,6 +58,52 @@ export const firefighterTheme = {
         },
     },
     roundness: 2, // Ligeramente más redondeado (default es 1)
+};
+
+export const darkFirefighterTheme = {
+    ...MD3DarkTheme,
+    colors: {
+        ...MD3DarkTheme.colors,
+        primary: "#ef5350",
+        onPrimary: "#FFFFFF",
+        primaryContainer: "#b71c1c",
+        onPrimaryContainer: "#ffcdd2",
+
+        secondary: "#ffd54f",
+        onSecondary: "#3e2723",
+        secondaryContainer: "#7c5700",
+        onSecondaryContainer: "#ffe082",
+
+        tertiary: "#bdbdbd",
+        onTertiary: "#212121",
+        tertiaryContainer: "#424242",
+        onTertiaryContainer: "#eeeeee",
+
+        error: "#ef9a9a",
+        onError: "#7f0000",
+        errorContainer: "#c62828",
+        onErrorContainer: "#ffebee",
+
+        background: "#121212",
+        onBackground: "#e0e0e0",
+        surface: "#1e1e1e",
+        onSurface: "#e0e0e0",
+        surfaceVariant: "#2c2c2c",
+        onSurfaceVariant: "#bdbdbd",
+
+        outline: "#757575",
+        outlineVariant: "#3a3a3a",
+
+        elevation: {
+            level0: "transparent",
+            level1: "#1e1e1e",
+            level2: "#252525",
+            level3: "#2a2a2a",
+            level4: "#2d2d2d",
+            level5: "#303030",
+        },
+    },
+    roundness: 2,
 };
 
 /**

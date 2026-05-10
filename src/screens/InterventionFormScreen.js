@@ -27,10 +27,22 @@ import AccordionSection from "../components/AccordionSection";
 import MultimediaSection from "../components/MultimediaSection";
 import * as Location from "expo-location";
 
+// Layout-only styles shared by module-level memoized sub-components (no theme colors)
+const itemStyles = StyleSheet.create({
+    timeRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+    timeInput: { flex: 1, flexDirection: "row", alignItems: "center" },
+    nowButton: { marginLeft: 8 },
+    typeChip: { margin: 4, borderRadius: 20 },
+    personItem: { flexDirection: "row", alignItems: "center", padding: 12, marginBottom: 12, borderRadius: 12 },
+    personIcon: { marginRight: 8 },
+    personInfo: { flex: 1 },
+    itemActions: { flexDirection: "row", alignItems: "center" },
+});
+
 // Componente memoizado para los botones de tiempo
 const TimeButton = memo(({ label, value, onChangeText, getCurrentTime, icon }) => (
-    <View style={styles.timeRow}>
-        <View style={styles.timeInput}>
+    <View style={itemStyles.timeRow}>
+        <View style={itemStyles.timeInput}>
             <TextInput
                 label={label}
                 value={value}
@@ -40,7 +52,7 @@ const TimeButton = memo(({ label, value, onChangeText, getCurrentTime, icon }) =
                 style={{flex: 1}}
                 left={<TextInput.Icon icon={icon} />}
             />
-            <Button mode="text" onPress={() => onChangeText(getCurrentTime())} style={styles.nowButton}>
+            <Button mode="text" onPress={() => onChangeText(getCurrentTime())} style={itemStyles.nowButton}>
                 Ahora
             </Button>
         </View>
@@ -55,93 +67,115 @@ const TypeChip = memo(({ option, isSelected, onPress }) => (
         selected={isSelected}
         showSelectedOverlay={true}
         onPress={onPress}
-        style={styles.typeChip}>
+        style={itemStyles.typeChip}>
         {option.label}
     </Chip>
 ));
 
 // Componente memoizado para servicios
-const ServiceItem = memo(({ service, index, onRemove, onEdit }) => (
-    <Surface style={styles.personItem} elevation={1}>
-        <View style={styles.personIcon}>
-            <IconButton icon="account-hard-hat" size={24} iconColor="#1976d2" />
-        </View>
-        <View style={styles.personInfo}>
-            <Text variant="titleMedium">{service.type}</Text>
-            <Text variant="bodySmall" style={styles.description}>
-                IDs: {service.ids || "N/A"} • Personal: {service.personnel || "N/A"}
-            </Text>
-        </View>
-        <View style={styles.itemActions}>
-            <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
-            <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
-        </View>
-    </Surface>
-));
+const ServiceItem = memo(({ service, index, onRemove, onEdit }) => {
+    const theme = useTheme();
+    return (
+        <Surface style={[itemStyles.personItem, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={itemStyles.personIcon}>
+                <IconButton icon="account-hard-hat" size={24} iconColor="#1976d2" />
+            </View>
+            <View style={itemStyles.personInfo}>
+                <Text variant="titleMedium">{service.type}</Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
+                    IDs: {service.ids || "N/A"} • Personal: {service.personnel || "N/A"}
+                </Text>
+            </View>
+            <View style={itemStyles.itemActions}>
+                <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
+                <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
+            </View>
+        </Surface>
+    );
+});
 
 // Componente memoizado para víctimas
-const VictimItem = memo(({ victim, index, onRemove, onEdit }) => (
-    <Surface style={styles.personItem} elevation={1}>
-        <View style={styles.personIcon}>
-            <IconButton icon="account-injury" size={24} iconColor="#d32f2f" />
-        </View>
-        <View style={styles.personInfo}>
-            <Text variant="titleMedium">{victim.name || "Sin nombre"}</Text>
-            <Text variant="bodySmall" style={styles.description}>
-                {[victim.age ? `${victim.age} años` : null, victim.gender].filter(Boolean).join(" • ")}
-            </Text>
-            {victim.dni && <Text variant="bodySmall" style={styles.description}>DNI: {victim.dni}</Text>}
-            {victim.description && (
-                <Text variant="bodySmall" style={[styles.description, {fontStyle: 'italic', marginTop: 4}]}>
-                    "{victim.description}"
+const VictimItem = memo(({ victim, index, onRemove, onEdit }) => {
+    const theme = useTheme();
+    return (
+        <Surface style={[itemStyles.personItem, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={itemStyles.personIcon}>
+                <IconButton icon="account-injury" size={24} iconColor="#d32f2f" />
+            </View>
+            <View style={itemStyles.personInfo}>
+                <Text variant="titleMedium">{victim.name || "Sin nombre"}</Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
+                    {[victim.age ? `${victim.age} años` : null, victim.gender].filter(Boolean).join(" • ")}
                 </Text>
-            )}
-        </View>
-        <View style={styles.itemActions}>
-            <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
-            <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
-        </View>
-    </Surface>
-));
+                {victim.dni && <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>DNI: {victim.dni}</Text>}
+                {victim.description && (
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic', marginTop: 4 }}>
+                        "{victim.description}"
+                    </Text>
+                )}
+            </View>
+            <View style={itemStyles.itemActions}>
+                <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
+                <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
+            </View>
+        </Surface>
+    );
+});
 
 // Componente memoizado para testigos
-const WitnessItem = memo(({ witness, index, onRemove, onEdit }) => (
-    <Surface style={styles.personItem} elevation={1}>
-        <View style={styles.personIcon}>
-            <IconButton icon="account-eye" size={24} iconColor="#2e7d32" />
-        </View>
-        <View style={styles.personInfo}>
-            <Text variant="titleMedium">{witness.name || "Sin nombre"}</Text>
-            <Text variant="bodySmall" style={styles.description}>
-                {[witness.age ? `${witness.age} años` : null, witness.gender].filter(Boolean).join(" • ")}
-            </Text>
-            {witness.dni && <Text variant="bodySmall" style={styles.description}>DNI: {witness.dni}</Text>}
-            {witness.description && (
-                <Text variant="bodySmall" style={[styles.description, {fontStyle: 'italic', marginTop: 4}]}>
-                    "{witness.description}"
+const WitnessItem = memo(({ witness, index, onRemove, onEdit }) => {
+    const theme = useTheme();
+    return (
+        <Surface style={[itemStyles.personItem, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <View style={itemStyles.personIcon}>
+                <IconButton icon="account-eye" size={24} iconColor="#2e7d32" />
+            </View>
+            <View style={itemStyles.personInfo}>
+                <Text variant="titleMedium">{witness.name || "Sin nombre"}</Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
+                    {[witness.age ? `${witness.age} años` : null, witness.gender].filter(Boolean).join(" • ")}
                 </Text>
-            )}
-        </View>
-        <View style={styles.itemActions}>
-            <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
-            <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
-        </View>
-    </Surface>
-));
+                {witness.dni && <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>DNI: {witness.dni}</Text>}
+                {witness.description && (
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic', marginTop: 4 }}>
+                        "{witness.description}"
+                    </Text>
+                )}
+            </View>
+            <View style={itemStyles.itemActions}>
+                <IconButton icon="pencil" size={20} onPress={() => onEdit(index)} />
+                <IconButton icon="delete" size={20} iconColor="#b71c1c" onPress={() => onRemove(index)} />
+            </View>
+        </Surface>
+    );
+});
 
 const InterventionFormScreen = ({ navigation, route }) => {
-    const { addIntervention, updateIntervention, getIntervention } = useDatabase();
+    const { addIntervention, updateIntervention, getIntervention, updateCommunication } = useDatabase();
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const interventionId = route.params?.interventionId;
+    const communicationId = route.params?.communicationId;
+    const prefill = route.params?.prefill;
     const isEditing = !!interventionId;
     const existingIntervention = isEditing ? getIntervention(interventionId) : null;
 
-    const [callTime, setCallTime] = useState(existingIntervention?.callTime || "");
+    React.useLayoutEffect(() => {
+        if (communicationId) {
+            navigation.setOptions({ title: "Intervención desde Comunicación" });
+        } else if (isEditing) {
+            navigation.setOptions({ title: "Editar Intervención" });
+        }
+    }, [navigation, communicationId, isEditing]);
+
+    const [callTime, setCallTime] = useState(existingIntervention?.callTime || prefill?.callTime || "");
     const [departureTime, setDepartureTime] = useState(existingIntervention?.departureTime || "");
     const [returnTime, setReturnTime] = useState(existingIntervention?.returnTime || "");
-    const [address, setAddress] = useState(existingIntervention?.address || "");
-    const [type, setType] = useState(existingIntervention?.type || InterventionType.OTHER);
+    const [address, setAddress] = useState(existingIntervention?.address || prefill?.address || "");
+    const [latitude, setLatitude] = useState(existingIntervention?.latitude ?? null);
+    const [longitude, setLongitude] = useState(existingIntervention?.longitude ?? null);
+    const [type, setType] = useState(existingIntervention?.type || prefill?.type || InterventionType.OTHER);
 
     const [otherServices, setOtherServices] = useState(existingIntervention?.otherServices || []);
     const [newServiceType, setNewServiceType] = useState("Policía");
@@ -181,11 +215,13 @@ const InterventionFormScreen = ({ navigation, route }) => {
                 longitude: location.coords.longitude,
             });
 
+            setLatitude(location.coords.latitude);
+            setLongitude(location.coords.longitude);
+
             if (reverseGeocode.length > 0) {
                 const { street, streetNumber, city, region } = reverseGeocode[0];
                 const addressParts = [street, streetNumber, city, region].filter(Boolean);
                 const addressStr = addressParts.join(", ");
-                
                 setAddress(addressStr || `${location.coords.latitude}, ${location.coords.longitude}`);
             } else {
                 setAddress(`${location.coords.latitude}, ${location.coords.longitude}`);
@@ -322,21 +358,35 @@ const InterventionFormScreen = ({ navigation, route }) => {
                 callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes,
                 audioNotes: existingIntervention?.audioNotes || [], sketches: existingIntervention?.sketches || [],
                 photos,
+                communicationId: communicationId || existingIntervention?.communicationId || null,
+                latitude: latitude ?? null,
+                longitude: longitude ?? null,
             };
 
             if (isEditing) {
                 await updateIntervention(interventionId, interventionData);
                 Alert.alert("Éxito", "Intervención actualizada correctamente", [{ text: "OK", onPress: () => navigation.goBack() }]);
             } else {
-                await addIntervention(interventionData);
-                Alert.alert("Éxito", "Intervención guardada correctamente", [{ text: "OK", onPress: () => navigation.goBack() }]);
+                const newId = await addIntervention(interventionData);
+                if (communicationId) {
+                    await updateCommunication(communicationId, {
+                        status: "desplazamiento",
+                        interventionId: newId,
+                    });
+                    Alert.alert("Éxito", "Intervención creada y comunicación vinculada", [{
+                        text: "OK",
+                        onPress: () => navigation.replace("InterventionDetail", { id: newId }),
+                    }]);
+                } else {
+                    Alert.alert("Éxito", "Intervención guardada correctamente", [{ text: "OK", onPress: () => navigation.goBack() }]);
+                }
             }
         } catch (error) {
             Alert.alert("Error", `No se pudo ${isEditing ? "actualizar" : "guardar"} la intervención`);
         } finally {
             setLoading(false);
         }
-    }, [addIntervention, updateIntervention, isEditing, interventionId, existingIntervention, callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes, photos, navigation]);
+    }, [addIntervention, updateIntervention, updateCommunication, isEditing, interventionId, communicationId, existingIntervention, callTime, departureTime, returnTime, address, type, otherServices, witnesses, victims, fieldNotes, photos, navigation]);
 
     return (
         <KeyboardAvoidingView
@@ -372,19 +422,31 @@ const InterventionFormScreen = ({ navigation, route }) => {
                     <TextInput
                         label="Dirección o punto de referencia"
                         value={address}
-                        onChangeText={setAddress}
+                        onChangeText={(text) => {
+                            setAddress(text);
+                            setLatitude(null);
+                            setLongitude(null);
+                        }}
                         mode="outlined"
                         multiline
                         style={styles.input}
                         left={
-                            <TextInput.Icon 
-                                icon={locationLoading ? "loading" : "map-marker"} 
+                            <TextInput.Icon
+                                icon={locationLoading ? "loading" : "map-marker"}
                                 onPress={handleGetCurrentLocation}
                                 disabled={locationLoading}
                                 color={locationLoading ? theme.colors.primary : theme.colors.error}
                             />
                         }
+                        right={latitude != null ? (
+                            <TextInput.Icon icon="crosshairs-gps" color={theme.colors.primary} disabled />
+                        ) : null}
                     />
+                    {latitude != null && (
+                        <Text variant="labelSmall" style={{ color: theme.colors.primary, marginTop: -8, marginBottom: 12 }}>
+                            GPS: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                        </Text>
+                    )}
                 </AccordionSection>
 
                 <AccordionSection title="Otros Servicios" icon="car-emergency">
@@ -567,7 +629,7 @@ const InterventionFormScreen = ({ navigation, route }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -577,11 +639,11 @@ const styles = StyleSheet.create({
     scrollViewContent: {
         flexGrow: 1,
         paddingTop: 16,
-        paddingBottom: 160, // Aumentado para que el footer no tape el contenido
+        paddingBottom: 24,
     },
     input: {
         marginBottom: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.surface,
     },
     rowInputs: {
         flexDirection: 'row',
@@ -624,12 +686,11 @@ const styles = StyleSheet.create({
     },
     servicesTitle: {
         marginBottom: 12,
-        color: "#757575",
+        color: theme.colors.onSurfaceVariant,
     },
     personItem: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
         padding: 12,
         marginBottom: 12,
         borderRadius: 12,
@@ -639,10 +700,6 @@ const styles = StyleSheet.create({
     },
     personInfo: {
         flex: 1,
-    },
-    description: {
-        color: "#666",
-        marginTop: 2,
     },
     itemActions: {
         flexDirection: "row",
@@ -661,11 +718,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     stickyFooter: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.surface,
         padding: 16,
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,

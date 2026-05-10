@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, Alert, Image, Modal, TouchableWithoutFeedback, TouchableOpacity } from "react-native";
+import React, { useState, useMemo } from "react";
+import { View, StyleSheet, ScrollView, Alert, Image, Modal, TouchableWithoutFeedback, TouchableOpacity, Linking, Platform } from "react-native";
 import {
     Card,
     Title,
@@ -15,7 +15,6 @@ import {
     Surface,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
-import { API_KEY } from "../../env";
 import { InterventionType } from "../types";
 import { generateInterventionPDF } from "../utils/pdfGenerator";
 
@@ -57,14 +56,18 @@ const getTypeColor = (type, theme) => {
 };
 
 const InterventionDetailScreen = ({ navigation, route }) => {
-    const { getIntervention, deleteIntervention, updateIntervention } =
+    const { getIntervention, deleteIntervention, updateIntervention, getCommunication, getSetting } =
         useDatabase();
     const [generating, setGenerating] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const intervention = getIntervention(route.params.id);
+    const linkedCommunication = intervention?.communicationId
+        ? getCommunication(intervention.communicationId)
+        : null;
 
     if (!intervention) {
         return (
@@ -78,7 +81,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     const handleGeneratePdf = async () => {
         setGeneratingPdf(true);
         try {
-            await generateInterventionPDF(intervention);
+            await generateInterventionPDF(intervention, linkedCommunication);
         } catch (error) {
             Alert.alert("Error", "No se pudo generar el PDF");
         } finally {
@@ -114,11 +117,44 @@ const InterventionDetailScreen = ({ navigation, route }) => {
         );
     };
 
+    const openMap = () => {
+        const { latitude, longitude, address } = intervention;
+        const hasCoords = latitude != null && longitude != null;
+
+        let url;
+        if (hasCoords) {
+            const label = encodeURIComponent("Intervención Bomberos");
+            url = Platform.OS === "ios"
+                ? `maps://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`
+                : `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`;
+        } else if (address) {
+            const encodedAddr = encodeURIComponent(address);
+            url = Platform.OS === "ios"
+                ? `maps://maps.apple.com/?q=${encodedAddr}`
+                : `geo:0,0?q=${encodedAddr}`;
+        } else {
+            Alert.alert("Sin ubicación", "Esta intervención no tiene dirección ni coordenadas registradas.");
+            return;
+        }
+
+        Linking.canOpenURL(url).then(supported => {
+            if (supported) {
+                Linking.openURL(url);
+            } else {
+                const fallback = hasCoords
+                    ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                Linking.openURL(fallback);
+            }
+        });
+    };
+
     const generateReport = async () => {
         setGenerating(true);
 
-        if (!API_KEY || API_KEY === "undefined" || API_KEY === "") {
-            console.error("API_KEY no está configurada correctamente");
+        const API_KEY = getSetting("gemini_api_key", "");
+        if (!API_KEY) {
+            console.warn("API_KEY no configurada — se usará generación local");
         }
 
         try {
@@ -339,10 +375,28 @@ INSTRUCCIONES FINALES:
                             </View>
                         </View>
                         
-                        <View style={styles.addressRow}>
-                            <Avatar.Icon size={32} icon="map-marker" style={styles.transparentIcon} color={theme.colors.primary} />
-                            <Text variant="bodyLarge" style={styles.addressText}>{intervention.address || "Ubicación no especificada"}</Text>
-                        </View>
+                        <TouchableOpacity onPress={openMap} activeOpacity={0.7}>
+                            <View style={styles.addressRow}>
+                                <Avatar.Icon size={32} icon="map-marker" style={styles.transparentIcon} color={theme.colors.primary} />
+                                <View style={{ flex: 1 }}>
+                                    <Text variant="bodyLarge" style={styles.addressText}>
+                                        {intervention.address || "Ubicación no especificada"}
+                                    </Text>
+                                    {intervention.latitude != null && (
+                                        <Text variant="labelSmall" style={{ color: theme.colors.primary, marginTop: 2 }}>
+                                            GPS precisión alta · {Number(intervention.latitude).toFixed(5)}, {Number(intervention.longitude).toFixed(5)}
+                                        </Text>
+                                    )}
+                                </View>
+                                <IconButton
+                                    icon={intervention.latitude != null ? "map" : "map-search-outline"}
+                                    iconColor={intervention.latitude != null ? theme.colors.primary : theme.colors.outline}
+                                    size={22}
+                                    onPress={openMap}
+                                    style={{ margin: 0 }}
+                                />
+                            </View>
+                        </TouchableOpacity>
                     </Card.Content>
                 </Card>
 
@@ -481,6 +535,40 @@ INSTRUCCIONES FINALES:
                         </Card.Content>
                     </Card>
                 )}
+                {/* Linked communication */}
+                {linkedCommunication && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content style={styles.noPaddingContent}>
+                            <Title style={[styles.sectionTitle, {marginHorizontal: 16, marginTop: 16}]}>
+                                Comunicación Vinculada
+                            </Title>
+                            <List.Item
+                                title={linkedCommunication.callerName || "Llamante desconocido"}
+                                description={`${linkedCommunication.time || "--:--"}  •  ${linkedCommunication.address || "Sin dirección"}`}
+                                left={props => (
+                                    <List.Icon {...props} icon="phone-incoming" color={theme.colors.primary} />
+                                )}
+                                right={props => (
+                                    <IconButton
+                                        {...props}
+                                        icon="chevron-right"
+                                        onPress={() =>
+                                            navigation.navigate("CommunicationDetail", {
+                                                id: linkedCommunication.id,
+                                            })
+                                        }
+                                    />
+                                )}
+                                onPress={() =>
+                                    navigation.navigate("CommunicationDetail", {
+                                        id: linkedCommunication.id,
+                                    })
+                                }
+                                style={styles.listItem}
+                            />
+                        </Card.Content>
+                    </Card>
+                )}
             </ScrollView>
 
             {/* Sticky Action Footer */}
@@ -558,7 +646,7 @@ INSTRUCCIONES FINALES:
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
     mainContainer: {
         flex: 1,
     },
@@ -567,7 +655,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 220, // Aumentado para evitar que los botones tapen el contenido
+        paddingBottom: 24,
     },
     centerContent: {
         justifyContent: 'center',
@@ -576,7 +664,6 @@ const styles = StyleSheet.create({
     card: {
         marginBottom: 16,
         borderRadius: 12,
-        backgroundColor: "#FFFFFF",
         overflow: 'hidden',
     },
     header: {
@@ -605,7 +692,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         marginTop: 16,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: theme.colors.surfaceVariant,
         padding: 8,
         borderRadius: 8,
     },
@@ -615,16 +702,14 @@ const styles = StyleSheet.create({
     },
     addressText: {
         flex: 1,
-        color: "#424242",
+        color: theme.colors.onSurface,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: "bold",
         marginBottom: 16,
-        color: "#1a1c1e",
+        color: theme.colors.onSurface,
     },
-    
-    // Timeline Styles
     timelineContainer: {
         paddingLeft: 8,
         position: 'relative',
@@ -635,7 +720,7 @@ const styles = StyleSheet.create({
         top: 20,
         bottom: 20,
         width: 2,
-        backgroundColor: '#e0e0e0',
+        backgroundColor: theme.colors.outlineVariant,
     },
     timelineItem: {
         flexDirection: 'row',
@@ -650,43 +735,33 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     timelineLabel: {
-        color: '#757575',
+        color: theme.colors.onSurfaceVariant,
     },
-    
-    // Notes
     notesSurface: {
         padding: 16,
         borderRadius: 8,
-        backgroundColor: "#fff8e1",
+        backgroundColor: theme.dark ? "#2d2000" : "#fff8e1",
         borderLeftWidth: 4,
         borderLeftColor: "#ffb300",
     },
     notesText: {
-        color: "#424242",
+        color: theme.colors.onSurface,
         lineHeight: 22,
     },
-
-    // Lists
     noPaddingContent: {
         paddingHorizontal: 0,
         paddingBottom: 8,
     },
     subHeader: {
-        color: "#757575",
+        color: theme.colors.onSurfaceVariant,
         fontWeight: "bold",
     },
     listItem: {
         paddingLeft: 16,
         paddingRight: 16,
     },
-
-    // Footer
     stickyFooter: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.surface,
         padding: 16,
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
@@ -703,7 +778,6 @@ const styles = StyleSheet.create({
         marginTop: 12,
         borderRadius: 8,
     },
-    // Multimedia styles
     photoList: {
         flexDirection: 'row',
         paddingVertical: 4,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, StyleSheet, FlatList, ActivityIndicator, Alert } from "react-native";
 import {
     Card,
@@ -54,16 +54,20 @@ const getTypeColor = (type, theme) => {
 };
 
 const HomeScreen = ({ navigation }) => {
-    const { interventions } = useDatabase();
+    const { interventions, getCommunication } = useDatabase();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState(null);
     const [generatingPdfId, setGeneratingPdfId] = useState(null);
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const handleGeneratePdf = async (intervention) => {
         setGeneratingPdfId(intervention.id);
+        const linkedCommunication = intervention.communicationId
+            ? getCommunication(intervention.communicationId)
+            : null;
         try {
-            await generateInterventionPDF(intervention);
+            await generateInterventionPDF(intervention, linkedCommunication);
         } catch (error) {
             Alert.alert("Error", "No se pudo generar el PDF");
         } finally {
@@ -227,22 +231,22 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
     },
     headerContainer: {
         paddingTop: 16,
         paddingBottom: 8,
-        backgroundColor: "#ffffff",
+        backgroundColor: theme.colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
+        borderBottomColor: theme.colors.outlineVariant,
         elevation: 2,
     },
     searchbar: {
         marginHorizontal: 16,
         marginBottom: 12,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: theme.colors.surfaceVariant,
         borderRadius: 12,
     },
     filterContainer: {
@@ -260,7 +264,6 @@ const styles = StyleSheet.create({
     card: {
         marginBottom: 16,
         borderRadius: 12,
-        backgroundColor: "#FFFFFF",
     },
     cardContent: {
         padding: 12,
@@ -283,13 +286,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     dateChip: {
-        backgroundColor: "#f0f0f0",
+        backgroundColor: theme.colors.surfaceVariant,
     },
     dateChipText: {
         fontSize: 10,
     },
     cardBody: {
-        paddingLeft: 44, // Align with title text
+        paddingLeft: 44,
     },
     infoRow: {
         flexDirection: "row",
@@ -302,7 +305,7 @@ const styles = StyleSheet.create({
     },
     address: {
         fontSize: 14,
-        color: "#424242",
+        color: theme.colors.onSurface,
         flex: 1,
     },
     timeInfo: {
@@ -317,9 +320,9 @@ const styles = StyleSheet.create({
     },
     notes: {
         fontSize: 13,
-        color: "#666",
+        color: theme.colors.onSurfaceVariant,
         fontStyle: "italic",
-        backgroundColor: "#f9f9f9",
+        backgroundColor: theme.colors.surfaceVariant,
         padding: 8,
         borderRadius: 6,
         marginTop: 4,
@@ -337,12 +340,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         textAlign: "center",
         marginBottom: 8,
-        color: "#424242",
+        color: theme.colors.onSurface,
         fontWeight: "bold",
     },
     emptySubtitle: {
         textAlign: "center",
-        color: "#757575",
+        color: theme.colors.onSurfaceVariant,
     },
     fab: {
         position: "absolute",

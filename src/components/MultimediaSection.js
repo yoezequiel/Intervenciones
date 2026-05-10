@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { Button, IconButton, Text, Surface, ActivityIndicator, useTheme } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,6 +7,7 @@ import { saveImagePermanently, deleteImage } from '../utils/mediaUtils';
 const MultimediaSection = ({ photos, onPhotosChange }) => {
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -145,7 +146,7 @@ const MultimediaSection = ({ photos, onPhotosChange }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     paddingVertical: 8,
   },
@@ -183,28 +184,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.colors.surfaceVariant,
     padding: 8,
     borderRadius: 8,
   },
   loadingText: {
     marginLeft: 12,
-    color: '#666',
+    color: theme.colors.onSurfaceVariant,
   },
   emptyContainer: {
     alignItems: 'center',
     padding: 24,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.outlineVariant,
     borderStyle: 'dashed',
     borderRadius: 12,
   },
   emptyText: {
-    color: '#757575',
+    color: theme.colors.onSurfaceVariant,
   },
   hint: {
     marginTop: 12,
-    color: '#9e9e9e',
+    color: theme.colors.onSurfaceVariant,
     fontStyle: 'italic',
     textAlign: 'center',
   },

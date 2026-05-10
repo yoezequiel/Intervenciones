@@ -1,101 +1,176 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Provider as PaperProvider } from "react-native-paper";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Provider as PaperProvider, Icon, IconButton, useTheme } from "react-native-paper";
 import { StatusBar, LogBox } from "react-native";
-import { DatabaseProvider } from "./src/context/DatabaseContext";
-import { firefighterTheme } from "./src/theme";
+import { DatabaseProvider, useDatabase } from "./src/context/DatabaseContext";
+import { firefighterTheme, darkFirefighterTheme } from "./src/theme";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 import HomeScreen from "./src/screens/HomeScreen";
 import InterventionFormScreen from "./src/screens/InterventionFormScreen";
 import InterventionDetailScreen from "./src/screens/InterventionDetailScreen";
 import ReportScreen from "./src/screens/ReportScreen";
+import CommunicationListScreen from "./src/screens/CommunicationListScreen";
+import CommunicationFormScreen from "./src/screens/CommunicationFormScreen";
+import CommunicationDetailScreen from "./src/screens/CommunicationDetailScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 
-// Ignorar logs específicos si es necesario
 LogBox.ignoreLogs(["Setting a timer", "AsyncStorage has been extracted"]);
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
-// Componente de carga inicial
-function LoadingScreen() {
-    return null; // O un componente de carga personalizado
+function MainTabs() {
+    const theme = useTheme();
+    const isDark = theme.dark;
+    const headerBg = isDark ? "#1a1a1a" : "#d32f2f";
+
+    return (
+        <Tab.Navigator
+            screenOptions={({ navigation }) => ({
+                tabBarIcon: ({ color, size }) => {
+                    const icon =
+                        navigation.getState().routes[navigation.getState().index]?.name ===
+                        "Intervenciones"
+                            ? "fire-truck"
+                            : "phone-log";
+                    return null; // handled per-screen below
+                },
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.outline,
+                tabBarStyle: {
+                    backgroundColor: theme.colors.surface,
+                    borderTopColor: theme.colors.outlineVariant,
+                    borderTopWidth: 1,
+                    elevation: 8,
+                },
+                headerStyle: { backgroundColor: headerBg },
+                headerTintColor: "#ffffff",
+                headerTitleStyle: { fontWeight: "bold" },
+                headerRight: () => (
+                    <IconButton
+                        icon="cog"
+                        iconColor="#ffffff"
+                        size={24}
+                        onPress={() => navigation.navigate("Settings")}
+                        style={{ marginRight: 4 }}
+                    />
+                ),
+            })}
+        >
+            <Tab.Screen
+                name="Intervenciones"
+                component={HomeScreen}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon source="fire-truck" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Comunicaciones"
+                component={CommunicationListScreen}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon source="phone-log" size={size} color={color} />
+                    ),
+                }}
+            />
+        </Tab.Navigator>
+    );
 }
 
 function AppContent() {
+    const theme = useTheme();
+    const isDark = theme.dark;
+    const headerBg = isDark ? "#1a1a1a" : "#d32f2f";
     const [isReady, setIsReady] = React.useState(false);
-    const [initialRoute, setInitialRoute] = React.useState("Loading");
+
+    const HEADER_OPTS = {
+        headerStyle: { backgroundColor: headerBg },
+        headerTintColor: "#ffffff",
+        headerTitleStyle: { fontWeight: "bold" },
+    };
 
     React.useEffect(() => {
-        // Aquí podrías agregar lógica de inicialización
-        const initializeApp = async () => {
+        const init = async () => {
             try {
-                // Inicialización de la aplicación
-                // Por ejemplo: cargar datos iniciales, verificar autenticación, etc.
-
-                // Simulamos un tiempo de carga
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-
-                setInitialRoute("Home");
-            } catch (error) {
-                console.error("Error during app initialization:", error);
-                // Podrías navegar a una pantalla de error aquí si lo deseas
+                await new Promise(resolve => setTimeout(resolve, 800));
             } finally {
                 setIsReady(true);
             }
         };
-
-        initializeApp();
+        init();
     }, []);
 
-    if (!isReady) {
-        return <LoadingScreen />;
-    }
+    if (!isReady) return null;
 
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName={initialRoute}>
+            <Stack.Navigator initialRouteName="Main">
                 <Stack.Screen
-                    name="Loading"
-                    component={LoadingScreen}
+                    name="Main"
+                    component={MainTabs}
                     options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                    name="Home"
-                    component={HomeScreen}
-                    options={{ title: "Intervenciones" }}
                 />
                 <Stack.Screen
                     name="InterventionForm"
                     component={InterventionFormScreen}
-                    options={{ title: "Nueva Intervención" }}
+                    options={{ title: "Nueva Intervención", ...HEADER_OPTS }}
                 />
                 <Stack.Screen
                     name="InterventionDetail"
                     component={InterventionDetailScreen}
-                    options={{ title: "Detalle de Intervención" }}
+                    options={{ title: "Detalle de Intervención", ...HEADER_OPTS }}
                 />
                 <Stack.Screen
                     name="Report"
                     component={ReportScreen}
-                    options={{ title: "Informe Generado" }}
+                    options={{ title: "Informe Generado", ...HEADER_OPTS }}
+                />
+                <Stack.Screen
+                    name="CommunicationForm"
+                    component={CommunicationFormScreen}
+                    options={{ title: "Nueva Comunicación", ...HEADER_OPTS }}
+                />
+                <Stack.Screen
+                    name="CommunicationDetail"
+                    component={CommunicationDetailScreen}
+                    options={{ title: "Detalle de Comunicación", ...HEADER_OPTS }}
+                />
+                <Stack.Screen
+                    name="Settings"
+                    component={SettingsScreen}
+                    options={{ title: "Configuración", ...HEADER_OPTS }}
                 />
             </Stack.Navigator>
         </NavigationContainer>
     );
 }
 
+function ThemedApp() {
+    const { getSetting, isDbReady } = useDatabase();
+    const isDark = isDbReady && getSetting("dark_mode") === "true";
+    const theme = isDark ? darkFirefighterTheme : firefighterTheme;
+
+    return (
+        <PaperProvider theme={theme}>
+            <StatusBar
+                barStyle="light-content"
+                backgroundColor={isDark ? "#1a1a1a" : "#b71c1c"}
+            />
+            <AppContent />
+        </PaperProvider>
+    );
+}
+
 export default function App() {
     return (
         <ErrorBoundary>
-            <PaperProvider theme={firefighterTheme}>
-                <DatabaseProvider>
-                    <StatusBar
-                        barStyle="light-content"
-                        backgroundColor="#b71c1c"
-                    />
-                    <AppContent />
-                </DatabaseProvider>
-            </PaperProvider>
+            <DatabaseProvider>
+                <ThemedApp />
+            </DatabaseProvider>
         </ErrorBoundary>
     );
 }
