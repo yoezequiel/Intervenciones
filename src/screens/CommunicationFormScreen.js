@@ -2,8 +2,10 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import {
     View,
     StyleSheet,
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
     TextInput,
     Button,
@@ -16,6 +18,7 @@ import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import AccordionSection from "../components/AccordionSection";
 import { useModal } from "../context/ModalContext";
+import { useScrollToFocusedInput } from "../hooks/useScrollToFocusedInput";
 
 const CommunicationFormScreen = ({ navigation, route }) => {
     const { addCommunication, updateCommunication, getCommunication } = useDatabase();
@@ -46,6 +49,10 @@ const CommunicationFormScreen = ({ navigation, route }) => {
     const [notes, setNotes] = useState(existing?.notes || "");
     const [loading, setLoading] = useState(false);
     const [timeTouched, setTimeTouched] = useState(false);
+
+    const scrollRef = useRef(null);
+    const [footerHeight, setFooterHeight] = useState(0);
+    const scrollProps = useScrollToFocusedInput(scrollRef, footerHeight);
 
     const isValidTime = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
     const timeHasError = timeTouched && !!time && !isValidTime(time);
@@ -131,15 +138,19 @@ const CommunicationFormScreen = ({ navigation, route }) => {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            <KeyboardAwareScrollView
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "padding"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+                style={{ flex: 1 }}
+            >
+            <ScrollView
+                ref={scrollRef}
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollViewContent}
                 keyboardShouldPersistTaps="handled"
-                enableOnAndroid
-                enableAutomaticScroll
-                extraScrollHeight={24}
-                extraHeight={80}
+                automaticallyAdjustKeyboardInsets
                 showsVerticalScrollIndicator
+                {...scrollProps}
             >
                 <AccordionSection title="Datos del Llamante" defaultExpanded icon="phone-incoming">
                     <TextInput
@@ -233,9 +244,9 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                         style={styles.input}
                     />
                 </AccordionSection>
-            </KeyboardAwareScrollView>
+            </ScrollView>
 
-            <Surface style={styles.stickyFooter} elevation={4}>
+            <Surface style={styles.stickyFooter} elevation={4} onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}>
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
@@ -247,6 +258,7 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                     {isEditing ? "Actualizar Comunicación" : "Registrar Comunicación"}
                 </Button>
             </Surface>
+            </KeyboardAvoidingView>
         </View>
     );
 };

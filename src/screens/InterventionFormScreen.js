@@ -4,8 +4,10 @@ import {
     StyleSheet,
     Pressable,
     AppState,
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
     TextInput,
     Button,
@@ -22,6 +24,7 @@ import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import MultimediaSection from "../components/MultimediaSection";
 import { useModal } from "../context/ModalContext";
+import { useScrollToFocusedInput } from "../hooks/useScrollToFocusedInput";
 import * as Location from "expo-location";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -273,9 +276,11 @@ const InterventionFormScreen = ({ navigation, route }) => {
     // ── Wizard ──
     const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 0);
     const scrollRef = useRef(null);
+    const [footerHeight, setFooterHeight] = useState(0);
+    const scrollProps = useScrollToFocusedInput(scrollRef, footerHeight);
 
     useEffect(() => {
-        scrollRef.current?.scrollToPosition(0, 0, false);
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
         saveDraftRef.current?.();
     }, [currentStep]);
 
@@ -1024,21 +1029,24 @@ const InterventionFormScreen = ({ navigation, route }) => {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <StepProgress currentStep={currentStep} onStepPress={setCurrentStep} theme={theme} />
 
-            <KeyboardAwareScrollView
-                ref={scrollRef}
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollViewContent}
-                keyboardShouldPersistTaps="handled"
-                enableOnAndroid
-                enableAutomaticScroll
-                extraScrollHeight={24}
-                extraHeight={80}
-                showsVerticalScrollIndicator
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "padding"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+                style={{ flex: 1 }}
             >
-                {renderCurrentStep()}
-            </KeyboardAwareScrollView>
+                <ScrollView
+                    ref={scrollRef}
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollViewContent}
+                    keyboardShouldPersistTaps="handled"
+                    automaticallyAdjustKeyboardInsets
+                    showsVerticalScrollIndicator
+                    {...scrollProps}
+                >
+                    {renderCurrentStep()}
+                </ScrollView>
 
-            <Surface style={styles.footer} elevation={4}>
+            <Surface style={styles.footer} elevation={4} onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}>
                 <View style={styles.footerRow}>
                     <Button
                         mode="outlined"
@@ -1073,6 +1081,7 @@ const InterventionFormScreen = ({ navigation, route }) => {
                     )}
                 </View>
             </Surface>
+            </KeyboardAvoidingView>
         </View>
     );
 };
