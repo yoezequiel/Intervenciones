@@ -184,6 +184,7 @@ export const DatabaseProvider = ({ children }) => {
         } catch (err) {
             console.error("Error loading communications:", err);
             setCommunications([]);
+            throw err;
         }
     };
 

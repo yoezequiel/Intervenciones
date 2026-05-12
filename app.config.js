@@ -15,7 +15,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.yoezequiel.IntervencionBomberos",
-            buildNumber: "1.0.0",
+            buildNumber: "1.0.1",
             infoPlist: {
                 NSCameraUsageDescription:
                     "Esta aplicación necesita acceso a la cámara para tomar fotos durante las intervenciones.",
@@ -33,7 +33,7 @@ export default {
                 backgroundColor: "#d32f2f",
             },
             package: "com.yoezequiel.IntervencionBomberos",
-            versionCode: 1,
+            versionCode: 2,
             permissions: [
                 "READ_EXTERNAL_STORAGE",
                 "WRITE_EXTERNAL_STORAGE",
