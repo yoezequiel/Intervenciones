@@ -1,7 +1,7 @@
 export default {
     expo: {
-        name: "Intervenciones Bomberos",
-        slug: "IntervencionBomberos",
+        name: "FireLog",
+        slug: "firelog",
         version: "1.0.0",
         orientation: "portrait",
         icon: "./assets/icon.png",
@@ -14,7 +14,7 @@ export default {
         assetBundlePatterns: ["**/*"],
         ios: {
             supportsTablet: true,
-            bundleIdentifier: "com.yoezequiel.intervencionbomberos",
+            bundleIdentifier: "com.yoezequiel.firelog",
             buildNumber: "1.0.0",
             infoPlist: {
                 NSCameraUsageDescription:
@@ -32,7 +32,7 @@ export default {
                 foregroundImage: "./assets/icon.png",
                 backgroundColor: "#d32f2f",
             },
-            package: "com.yoezequiel.intervencionbomberos",
+            package: "com.yoezequiel.firelog",
             versionCode: 1,
             permissions: [
                 "READ_EXTERNAL_STORAGE",

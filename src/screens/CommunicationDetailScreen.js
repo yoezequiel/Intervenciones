@@ -21,18 +21,21 @@ const STATUS_COLORS = {
     recibido: "#FF8F00",
     reportado: "#1565C0",
     desplazamiento: "#2E7D32",
+    no_desplazamiento: "#b71c1c",
 };
 
 const STATUS_LABELS = {
     recibido: "Recibido",
     reportado: "Reportado",
     desplazamiento: "Desplazado",
+    no_desplazamiento: "Sin desplazamiento",
 };
 
 const STATUS_ICONS = {
     recibido: "phone-incoming",
     reportado: "clipboard-check",
     desplazamiento: "truck-fast",
+    no_desplazamiento: "truck-remove",
 };
 
 const CommunicationDetailScreen = ({ navigation, route }) => {
@@ -112,6 +115,7 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
     };
 
     const isDispatched = communication.status === CommunicationStatus.DISPATCHED;
+    const isNoDispatched = communication.status === CommunicationStatus.NO_DISPATCHED;
 
     return (
         <View style={styles.mainContainer}>
@@ -225,6 +229,22 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
                     </Card.Content>
                 </Card>
 
+                {/* No dispatch reason */}
+                {isNoDispatched && communication.noDispatchReason ? (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content>
+                            <Title style={[styles.sectionTitle, { color: "#b71c1c" }]}>
+                                Motivo del no desplazamiento
+                            </Title>
+                            <Surface style={[styles.notesSurface, { borderLeftColor: "#b71c1c", backgroundColor: theme.dark ? "#3b0000" : "#ffebee" }]} elevation={0}>
+                                <Text variant="bodyLarge" style={styles.notesText}>
+                                    {communication.noDispatchReason}
+                                </Text>
+                            </Surface>
+                        </Card.Content>
+                    </Card>
+                ) : null}
+
                 {/* Notes */}
                 {communication.notes ? (
                     <Card style={styles.card} mode="elevated" elevation={1}>
@@ -290,7 +310,7 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
                         Marcar como Reportado
                     </Button>
                 )}
-                {!isDispatched && (
+                {!isDispatched && !isNoDispatched && (
                     <Button
                         mode="contained"
                         onPress={handleCreateIntervention}

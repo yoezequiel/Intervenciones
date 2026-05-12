@@ -106,10 +106,18 @@ export const DatabaseProvider = ({ children }) => {
                     status TEXT NOT NULL DEFAULT 'recibido',
                     notes TEXT,
                     interventionId INTEGER,
+                    noDispatchReason TEXT,
                     createdAt TEXT NOT NULL,
                     updatedAt TEXT NOT NULL
                 );
             `);
+
+            // Migrations for communications table
+            const communicationInfo = await database.getAllAsync("PRAGMA table_info(communications)");
+            const hasNoDispatchReason = communicationInfo.some(col => col.name === 'noDispatchReason');
+            if (!hasNoDispatchReason) {
+                await database.execAsync("ALTER TABLE communications ADD COLUMN noDispatchReason TEXT");
+            }
 
             await database.execAsync(`
                 CREATE TABLE IF NOT EXISTS settings (
@@ -292,8 +300,8 @@ export const DatabaseProvider = ({ children }) => {
             const result = await db.runAsync(
                 `INSERT INTO communications (
                     callerName, callerPhone, time, address, incidentType,
-                    status, notes, interventionId, createdAt, updatedAt
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    status, notes, interventionId, noDispatchReason, createdAt, updatedAt
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 data.callerName || null,
                 data.callerPhone || null,
                 data.time || now.slice(11, 16),
@@ -302,6 +310,7 @@ export const DatabaseProvider = ({ children }) => {
                 data.status || 'recibido',
                 data.notes || null,
                 data.interventionId || null,
+                data.noDispatchReason || null,
                 now,
                 now
             );

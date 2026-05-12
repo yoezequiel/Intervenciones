@@ -19,18 +19,21 @@ const STATUS_COLORS = {
     recibido: "#FF8F00",
     reportado: "#1565C0",
     desplazamiento: "#2E7D32",
+    no_desplazamiento: "#b71c1c",
 };
 
 const STATUS_LABELS = {
     recibido: "Recibido",
     reportado: "Reportado",
     desplazamiento: "Desplazado",
+    no_desplazamiento: "Sin desplazamiento",
 };
 
 const STATUS_ICONS = {
     recibido: "phone-incoming",
     reportado: "clipboard-check-outline",
     desplazamiento: "truck-fast",
+    no_desplazamiento: "truck-remove",
 };
 
 const CommunicationListScreen = ({ navigation }) => {

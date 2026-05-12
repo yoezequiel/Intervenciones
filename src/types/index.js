@@ -12,4 +12,5 @@ export const CommunicationStatus = {
   RECEIVED: 'recibido',
   REPORTED: 'reportado',
   DISPATCHED: 'desplazamiento',
+  NO_DISPATCHED: 'no_desplazamiento',
 };
