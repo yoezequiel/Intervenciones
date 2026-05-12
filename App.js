@@ -7,6 +7,7 @@ import { StatusBar, LogBox } from "react-native";
 import { DatabaseProvider, useDatabase } from "./src/context/DatabaseContext";
 import { firefighterTheme, darkFirefighterTheme } from "./src/theme";
 import ErrorBoundary from "./src/components/ErrorBoundary";
+import { ModalProvider } from "./src/context/ModalContext";
 import HomeScreen from "./src/screens/HomeScreen";
 import InterventionFormScreen from "./src/screens/InterventionFormScreen";
 import InterventionDetailScreen from "./src/screens/InterventionDetailScreen";
@@ -156,11 +157,13 @@ function ThemedApp() {
 
     return (
         <PaperProvider theme={theme}>
-            <StatusBar
-                barStyle="light-content"
-                backgroundColor={isDark ? "#1a1a1a" : "#b71c1c"}
-            />
-            <AppContent />
+            <ModalProvider>
+                <StatusBar
+                    barStyle="light-content"
+                    backgroundColor={isDark ? "#1a1a1a" : "#b71c1c"}
+                />
+                <AppContent />
+            </ModalProvider>
         </PaperProvider>
     );
 }

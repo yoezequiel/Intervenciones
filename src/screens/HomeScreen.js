@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, Alert } from "react-native";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { View, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import {
     Card,
     Title,
@@ -15,6 +15,7 @@ import {
 import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import { generateInterventionPDF } from "../utils/pdfGenerator";
+import { useModal } from "../context/ModalContext";
 
 const getTypeIcon = (type) => {
     switch (type) {
@@ -54,10 +55,46 @@ const getTypeColor = (type, theme) => {
 };
 
 const HomeScreen = ({ navigation }) => {
-    const { interventions, getCommunication } = useDatabase();
+    const { interventions, getCommunication, getSetting, setSetting, isDbReady } = useDatabase();
+    const showModal = useModal();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState(null);
     const [generatingPdfId, setGeneratingPdfId] = useState(null);
+    const [sortDesc, setSortDesc] = useState(true);
+    const [visibleCount, setVisibleCount] = useState(15);
+    const draftCheckedRef = useRef(false);
+
+    useEffect(() => { setVisibleCount(15); }, [searchQuery, selectedType, sortDesc]);
+
+    useEffect(() => {
+        if (!isDbReady || draftCheckedRef.current) return;
+        draftCheckedRef.current = true;
+
+        const draftJson = getSetting("intervention_draft", "");
+        if (!draftJson) return;
+
+        let draft;
+        try { draft = JSON.parse(draftJson); } catch {
+            setSetting("intervention_draft", "").catch(() => {});
+            return;
+        }
+        if (!draft?.savedAt) return;
+
+        const d = new Date(draft.savedAt);
+        const when = d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) +
+            " a las " + d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+        showModal({
+            type: "confirm",
+            title: "Borrador encontrado",
+            message: `Tenés una intervención incompleta guardada el ${when}. ¿Querés retomar desde donde la dejaste?`,
+            confirmLabel: "Retomar",
+            cancelLabel: "Descartar",
+            dismissable: false,
+            onConfirm: () => navigation.navigate("InterventionForm", { draft }),
+            onCancel: () => setSetting("intervention_draft", "").catch(() => {}),
+        });
+    }, [isDbReady]);
     const theme = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -68,8 +105,8 @@ const HomeScreen = ({ navigation }) => {
             : null;
         try {
             await generateInterventionPDF(intervention, linkedCommunication);
-        } catch (error) {
-            Alert.alert("Error", "No se pudo generar el PDF");
+        } catch {
+            showModal({ type: "error", title: "Error", message: "No se pudo generar el PDF." });
         } finally {
             setGeneratingPdfId(null);
         }
@@ -86,6 +123,13 @@ const HomeScreen = ({ navigation }) => {
         const matchesType = !selectedType || intervention.type === selectedType;
         return matchesSearch && matchesType;
     });
+
+    const sortedInterventions = sortDesc
+        ? filteredInterventions
+        : [...filteredInterventions].reverse();
+
+    const paginatedInterventions = sortedInterventions.slice(0, visibleCount);
+    const hasMore = visibleCount < sortedInterventions.length;
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString("es-ES", {
@@ -141,17 +185,6 @@ const HomeScreen = ({ navigation }) => {
                             <Paragraph style={styles.address} numberOfLines={1}>{item.address || "Sin dirección"}</Paragraph>
                         </View>
 
-                        <View style={styles.timeInfo}>
-                            <View style={styles.timeItem}>
-                                <Avatar.Icon size={20} icon="phone-incoming" style={styles.smallIcon} color={theme.colors.primary} />
-                                <Text variant="bodySmall">{item.callTime || "--:--"}</Text>
-                            </View>
-                            <View style={styles.timeItem}>
-                                <Avatar.Icon size={20} icon="truck-fast" style={styles.smallIcon} color={theme.colors.secondary} />
-                                <Text variant="bodySmall">{item.departureTime || "--:--"}</Text>
-                            </View>
-                        </View>
-
                         {item.fieldNotes && (
                             <Paragraph numberOfLines={2} style={styles.notes}>
                                 "{item.fieldNotes}"
@@ -199,6 +232,18 @@ const HomeScreen = ({ navigation }) => {
                         )}
                     />
                 </View>
+                <View style={styles.countRow}>
+                    <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {sortedInterventions.length} intervención{sortedInterventions.length !== 1 ? "es" : ""}
+                    </Text>
+                    <IconButton
+                        icon={sortDesc ? "sort-calendar-descending" : "sort-calendar-ascending"}
+                        size={20}
+                        iconColor={theme.colors.primary}
+                        onPress={() => setSortDesc(v => !v)}
+                        style={{ margin: 0 }}
+                    />
+                </View>
             </View>
 
             {filteredInterventions.length === 0 ? (
@@ -208,15 +253,23 @@ const HomeScreen = ({ navigation }) => {
                         No hay intervenciones
                     </Text>
                     <Text variant="bodyMedium" style={styles.emptySubtitle}>
-                        {searchQuery || selectedType ? "Intenta con otra búsqueda o filtro." : "Presiona el botón + para crear tu primera intervención."}
+                        {searchQuery || selectedType ? "Intenta con otra búsqueda o filtro." : "Presioná el botón + para crear tu primera intervención."}
                     </Text>
                 </View>
             ) : (
                 <FlatList
-                    data={filteredInterventions}
+                    data={paginatedInterventions}
                     renderItem={renderIntervention}
                     keyExtractor={(item) => item.id?.toString() || ""}
                     contentContainerStyle={styles.listContainer}
+                    onEndReached={() => {
+                        if (hasMore) setVisibleCount(v => Math.min(v + 15, sortedInterventions.length));
+                    }}
+                    onEndReachedThreshold={0.4}
+                    ListFooterComponent={hasMore
+                        ? <ActivityIndicator size="small" color={theme.colors.primary} style={{ paddingVertical: 16 }} />
+                        : null
+                    }
                 />
             )}
 
@@ -251,6 +304,14 @@ const createStyles = (theme) => StyleSheet.create({
     },
     filterContainer: {
         paddingHorizontal: 16,
+    },
+    countRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 4,
     },
     filterChip: {
         marginRight: 8,

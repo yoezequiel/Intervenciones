@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { View, StyleSheet, FlatList } from "react-native";
+import React, { useState, useMemo, useEffect } from "react";
+import { View, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import {
     Card,
     Title,
@@ -9,6 +9,7 @@ import {
     Chip,
     Text,
     Avatar,
+    IconButton,
     useTheme,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
@@ -36,6 +37,10 @@ const CommunicationListScreen = ({ navigation }) => {
     const { communications } = useDatabase();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState(null);
+    const [sortDesc, setSortDesc] = useState(true);
+    const [visibleCount, setVisibleCount] = useState(15);
+
+    useEffect(() => { setVisibleCount(15); }, [searchQuery, selectedStatus, sortDesc]);
     const theme = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -60,6 +65,10 @@ const CommunicationListScreen = ({ navigation }) => {
     });
 
     const statusFilters = Object.values(CommunicationStatus);
+
+    const sortedComms = sortDesc ? filtered : [...filtered].reverse();
+    const paginatedComms = sortedComms.slice(0, visibleCount);
+    const hasMore = visibleCount < sortedComms.length;
 
     const renderItem = ({ item }) => {
         const statusColor = STATUS_COLORS[item.status] || theme.colors.outline;
@@ -166,6 +175,18 @@ const CommunicationListScreen = ({ navigation }) => {
                         )}
                     />
                 </View>
+                <View style={styles.countRow}>
+                    <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {sortedComms.length} comunicación{sortedComms.length !== 1 ? "es" : ""}
+                    </Text>
+                    <IconButton
+                        icon={sortDesc ? "sort-calendar-descending" : "sort-calendar-ascending"}
+                        size={20}
+                        iconColor={theme.colors.primary}
+                        onPress={() => setSortDesc(v => !v)}
+                        style={{ margin: 0 }}
+                    />
+                </View>
             </View>
 
             {filtered.length === 0 ? (
@@ -187,10 +208,18 @@ const CommunicationListScreen = ({ navigation }) => {
                 </View>
             ) : (
                 <FlatList
-                    data={filtered}
+                    data={paginatedComms}
                     renderItem={renderItem}
                     keyExtractor={item => item.id?.toString() || ""}
                     contentContainerStyle={styles.listContainer}
+                    onEndReached={() => {
+                        if (hasMore) setVisibleCount(v => Math.min(v + 15, sortedComms.length));
+                    }}
+                    onEndReachedThreshold={0.4}
+                    ListFooterComponent={hasMore
+                        ? <ActivityIndicator size="small" color={theme.colors.primary} style={{ paddingVertical: 16 }} />
+                        : null
+                    }
                 />
             )}
 
@@ -222,6 +251,14 @@ const createStyles = (theme) => StyleSheet.create({
         borderRadius: 12,
     },
     filterContainer: { paddingHorizontal: 16 },
+    countRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 4,
+    },
     filterChip: { marginRight: 8, borderRadius: 20 },
     listContainer: { padding: 16, paddingBottom: 80 },
     card: { marginBottom: 16, borderRadius: 12 },

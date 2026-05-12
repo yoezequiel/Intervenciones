@@ -203,6 +203,18 @@ export const generateInterventionPDF = async (intervention, communication = null
                 <span class="label">Ubicación</span>
                 <span class="value">${intervention.address || "No especificada"}</span>
             </div>
+            ${intervention.affectedSurface ? `
+            <div class="info-item">
+                <span class="label">Superficie Afectada</span>
+                <span class="value">${intervention.affectedSurface}</span>
+            </div>
+            ` : ''}
+            ${intervention.affectedEnvironments && intervention.affectedEnvironments.length > 0 ? `
+            <div class="info-item" style="grid-column: span 2">
+                <span class="label">Ambientes Afectados</span>
+                <span class="value">${intervention.affectedEnvironments.join(', ')}</span>
+            </div>
+            ` : ''}
         </div>
     </div>
 
@@ -303,7 +315,7 @@ export const generateInterventionPDF = async (intervention, communication = null
             <tbody>
                 ${intervention.victims ? intervention.victims.map(v => `
                     <tr>
-                        <td>${v.name || 'S/N'}</td>
+                        <td>${v.name || 'S/N'}${v.plate ? ` <span style="font-size:11px;color:#555">(Patente: ${v.plate})</span>` : ''}</td>
                         <td>${v.dni || '---'} / ${v.age ? v.age + ' años' : '---'}</td>
                         <td>Víctima - ${v.description || 'Sin datos'}</td>
                     </tr>

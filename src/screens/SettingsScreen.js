@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, Alert, Linking } from "react-native";
+import { View, StyleSheet, ScrollView, Linking, ActivityIndicator } from "react-native";
 import {
     Card,
     Title,
@@ -11,57 +11,111 @@ import {
     Divider,
     useTheme,
     Banner,
+    RadioButton,
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
+import { useModal } from "../context/ModalContext";
+import { testGeminiModel } from "../utils/geminiTestModel";
+
+const GEMINI_MODELS = [
+    { id: "gemini-3-flash-preview",         label: "Gemini 3 Flash Preview",         desc: "Predeterminado — rápido y eficiente" },
+    { id: "gemini-3.1-pro-preview",         label: "Gemini 3.1 Pro Preview",         desc: "SOTA: razonamiento profundo, multimodal y código" },
+    { id: "gemini-3.1-flash-lite",          label: "Gemini 3.1 Flash Lite",          desc: "Más eficiente: ideal para tareas de alto volumen" },
+    { id: "gemini-2.5-pro-preview-05-06",   label: "Gemini 2.5 Pro Preview",         desc: "Muy capaz, más lento" },
+    { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash Preview",       desc: "Rápido y muy capaz" },
+    { id: "gemini-2.0-flash",               label: "Gemini 2.0 Flash",               desc: "Estable, muy rápido" },
+    { id: "gemini-1.5-flash",               label: "Gemini 1.5 Flash",               desc: "Versión anterior estable" },
+    { id: "gemini-1.5-pro",                 label: "Gemini 1.5 Pro",                 desc: "Versión anterior, alta capacidad" },
+];
 
 const SettingsScreen = () => {
     const { getSetting, setSetting } = useDatabase();
     const theme = useTheme();
+    const showModal = useModal();
 
     const [apiKey, setApiKey] = useState(getSetting("gemini_api_key") || "");
     const [showKey, setShowKey] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isDark, setIsDark] = useState(getSetting("dark_mode") === "true");
+    const [selectedModel, setSelectedModel] = useState(
+        getSetting("gemini_model") || "gemini-3-flash-preview"
+    );
+    const [testingModel, setTestingModel] = useState(null);
+    const [testingLabel, setTestingLabel] = useState("");
 
     const hasApiKey = !!getSetting("gemini_api_key");
+    const successColor = theme.dark ? "#a5d6a7" : "#2e7d32";
 
     const handleSaveApiKey = useCallback(async () => {
         setSaving(true);
         try {
             await setSetting("gemini_api_key", apiKey.trim());
-            Alert.alert("Guardado", "La API key fue guardada correctamente.");
-        } catch (e) {
-            Alert.alert("Error", "No se pudo guardar la API key.");
+            showModal({ type: "success", title: "Guardado", message: "La API key fue guardada correctamente." });
+        } catch {
+            showModal({ type: "error", title: "Error", message: "No se pudo guardar la API key." });
         } finally {
             setSaving(false);
         }
     }, [apiKey, setSetting]);
 
     const handleClearApiKey = useCallback(() => {
-        Alert.alert(
-            "Eliminar API Key",
-            "¿Estás seguro? La generación de informes con IA pasará a modo local.",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Eliminar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await setSetting("gemini_api_key", "");
-                        setApiKey("");
-                    },
-                },
-            ]
-        );
+        showModal({
+            type: "confirm",
+            title: "Eliminar API Key",
+            message: "¿Estás seguro? La generación de informes con IA pasará a modo local.",
+            confirmLabel: "Eliminar",
+            confirmDestructive: true,
+            onConfirm: async () => {
+                await setSetting("gemini_api_key", "");
+                setApiKey("");
+            },
+        });
     }, [setSetting]);
+
+    const handleModelChange = useCallback(async (model) => {
+        if (testingModel) return;
+
+        const currentKey = getSetting("gemini_api_key");
+        if (!currentKey) {
+            setSelectedModel(model);
+            await setSetting("gemini_model", model).catch(() => {});
+            return;
+        }
+
+        setTestingModel(model);
+        setTestingLabel("");
+        try {
+            const result = await testGeminiModel(model, currentKey, (label) => setTestingLabel(label));
+            setSelectedModel(model);
+            await setSetting("gemini_model", model);
+            await setSetting(
+                "gemini_thinking_config",
+                result.thinkingConfig ? JSON.stringify(result.thinkingConfig) : ""
+            );
+            showModal({
+                type: "success",
+                title: "Modelo verificado",
+                message: `${GEMINI_MODELS.find(m => m.id === model)?.label} quedó seleccionado con ${result.label}.`,
+            });
+        } catch (err) {
+            showModal({
+                type: "error",
+                title: "Modelo no disponible",
+                message: err.message,
+            });
+        } finally {
+            setTestingModel(null);
+            setTestingLabel("");
+        }
+    }, [testingModel, getSetting, setSetting]);
 
     const handleToggleDarkMode = useCallback(
         async (value) => {
             setIsDark(value);
             try {
                 await setSetting("dark_mode", value ? "true" : "false");
-            } catch (e) {
-                Alert.alert("Error", "No se pudo guardar la preferencia.");
+            } catch {
+                showModal({ type: "error", title: "Error", message: "No se pudo guardar la preferencia." });
                 setIsDark(!value);
             }
         },
@@ -91,7 +145,7 @@ const SettingsScreen = () => {
                         {hasApiKey ? (
                             <Text
                                 variant="labelMedium"
-                                style={[styles.statusText, { color: "#2E7D32" }]}
+                                style={[styles.statusText, { color: successColor }]}
                             >
                                 ✓  API key configurada
                             </Text>
@@ -160,6 +214,65 @@ const SettingsScreen = () => {
                     >
                         Obtener API key gratuita en Google AI Studio
                     </Button>
+                </Card.Content>
+            </Card>
+
+            {/* ── Modelo de Gemini ────────────────────────────────────────── */}
+            <Card style={styles.card} mode="elevated" elevation={1}>
+                <Card.Content>
+                    <Title style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+                        Modelo de Gemini
+                    </Title>
+                    <Text
+                        variant="bodyMedium"
+                        style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
+                    >
+                        Elegí el modelo para la generación de informes.{" "}
+                        {hasApiKey
+                            ? "Al seleccionar uno se envía un mensaje de prueba para verificar que funcione."
+                            : "Configurá una API key primero para que el modelo se verifique al seleccionarlo."}
+                    </Text>
+                    <RadioButton.Group onValueChange={handleModelChange} value={selectedModel}>
+                        {GEMINI_MODELS.map(model => {
+                            const isTesting = testingModel === model.id;
+                            const isDisabled = !!testingModel;
+                            return (
+                                <List.Item
+                                    key={model.id}
+                                    title={model.label}
+                                    description={model.desc + (model.id === "gemini-3-flash-preview" ? " (predeterminado)" : "")}
+                                    left={() =>
+                                        isTesting ? (
+                                            <ActivityIndicator
+                                                size="small"
+                                                color={theme.colors.primary}
+                                                style={{ marginLeft: 8, marginRight: 4 }}
+                                            />
+                                        ) : (
+                                            <RadioButton
+                                                value={model.id}
+                                                color={theme.colors.primary}
+                                                uncheckedColor={theme.colors.outline}
+                                                disabled={isDisabled}
+                                            />
+                                        )
+                                    }
+                                    right={() =>
+                                        isTesting ? (
+                                            <Text
+                                                variant="labelSmall"
+                                                style={{ color: theme.colors.primary, alignSelf: "center", marginRight: 8, maxWidth: 140, textAlign: "right" }}
+                                            >
+                                                {testingLabel ? `Probando ${testingLabel}…` : "Verificando…"}
+                                            </Text>
+                                        ) : null
+                                    }
+                                    onPress={() => !isDisabled && handleModelChange(model.id)}
+                                    style={{ paddingHorizontal: 0, paddingVertical: 4, opacity: isDisabled && !isTesting ? 0.5 : 1 }}
+                                />
+                            );
+                        })}
+                    </RadioButton.Group>
                 </Card.Content>
             </Card>
 

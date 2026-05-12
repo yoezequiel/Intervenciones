@@ -59,6 +59,10 @@ export const DatabaseProvider = ({ children }) => {
                     photos TEXT,
                     report TEXT,
                     communicationId INTEGER,
+                    latitude REAL,
+                    longitude REAL,
+                    affectedSurface TEXT,
+                    affectedEnvironments TEXT,
                     createdAt TEXT NOT NULL,
                     updatedAt TEXT NOT NULL
                 );
@@ -81,6 +85,14 @@ export const DatabaseProvider = ({ children }) => {
             const hasLongitude = interventionInfo.some(col => col.name === 'longitude');
             if (!hasLongitude) {
                 await database.execAsync("ALTER TABLE interventions ADD COLUMN longitude REAL");
+            }
+            const hasAffectedSurface = interventionInfo.some(col => col.name === 'affectedSurface');
+            if (!hasAffectedSurface) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN affectedSurface TEXT");
+            }
+            const hasAffectedEnvironments = interventionInfo.some(col => col.name === 'affectedEnvironments');
+            if (!hasAffectedEnvironments) {
+                await database.execAsync("ALTER TABLE interventions ADD COLUMN affectedEnvironments TEXT");
             }
 
             await database.execAsync(`
@@ -145,6 +157,7 @@ export const DatabaseProvider = ({ children }) => {
                 audioNotes: safeJsonParse(row.audioNotes, []),
                 sketches: safeJsonParse(row.sketches, []),
                 photos: safeJsonParse(row.photos, []),
+                affectedEnvironments: safeJsonParse(row.affectedEnvironments, []),
             })));
         } catch (err) {
             console.error("Error loading interventions:", err);
@@ -199,8 +212,9 @@ export const DatabaseProvider = ({ children }) => {
                     callTime, departureTime, returnTime, address, type,
                     otherServices, witnesses, victims, fieldNotes,
                     audioNotes, sketches, photos, communicationId,
-                    latitude, longitude, createdAt, updatedAt
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    latitude, longitude, affectedSurface, affectedEnvironments,
+                    createdAt, updatedAt
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 intervention.callTime || null,
                 intervention.departureTime || null,
                 intervention.returnTime || null,
@@ -216,6 +230,8 @@ export const DatabaseProvider = ({ children }) => {
                 intervention.communicationId || null,
                 intervention.latitude ?? null,
                 intervention.longitude ?? null,
+                intervention.affectedSurface || null,
+                JSON.stringify(intervention.affectedEnvironments || []),
                 now,
                 now
             );
@@ -234,7 +250,7 @@ export const DatabaseProvider = ({ children }) => {
         const setClause = fields.map(field => `${field} = ?`).join(", ");
         const values = fields.map(field => {
             const value = updates[field];
-            if (["otherServices", "witnesses", "victims", "audioNotes", "sketches", "photos"].includes(field)) {
+            if (["otherServices", "witnesses", "victims", "audioNotes", "sketches", "photos", "affectedEnvironments"].includes(field)) {
                 return JSON.stringify(value || []);
             }
             return value ?? null;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 import {
     Card,
     Title,
@@ -15,6 +15,7 @@ import {
 } from "react-native-paper";
 import { useDatabase } from "../context/DatabaseContext";
 import { CommunicationStatus } from "../types";
+import { useModal } from "../context/ModalContext";
 
 const STATUS_COLORS = {
     recibido: "#FF8F00",
@@ -39,6 +40,7 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
         useDatabase();
     const theme = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
+    const showModal = useModal();
     const [loading, setLoading] = useState(false);
 
     const communication = getCommunication(route.params.id);
@@ -77,8 +79,8 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
         setLoading(true);
         try {
             await updateCommunication(communication.id, { status: CommunicationStatus.REPORTED });
-        } catch (e) {
-            Alert.alert("Error", "No se pudo actualizar el estado");
+        } catch {
+            showModal({ type: "error", title: "Error", message: "No se pudo actualizar el estado." });
         } finally {
             setLoading(false);
         }
@@ -96,21 +98,17 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
     };
 
     const handleDelete = () => {
-        Alert.alert(
-            "Confirmar eliminación",
-            "¿Estás seguro de que quieres eliminar esta comunicación?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Eliminar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteCommunication(communication.id);
-                        navigation.goBack();
-                    },
-                },
-            ]
-        );
+        showModal({
+            type: "confirm",
+            title: "Eliminar comunicación",
+            message: "¿Estás seguro de que querés eliminar esta comunicación? Esta acción no se puede deshacer.",
+            confirmLabel: "Eliminar",
+            confirmDestructive: true,
+            onConfirm: async () => {
+                await deleteCommunication(communication.id);
+                navigation.goBack();
+            },
+        });
     };
 
     const isDispatched = communication.status === CommunicationStatus.DISPATCHED;
@@ -326,7 +324,7 @@ const CommunicationDetailScreen = ({ navigation, route }) => {
 };
 
 const createStyles = (theme) => StyleSheet.create({
-    mainContainer: { flex: 1 },
+    mainContainer: { flex: 1, backgroundColor: theme.colors.background },
     container: { flex: 1 },
     center: { justifyContent: "center", alignItems: "center" },
     scrollContent: { padding: 16, paddingBottom: 24 },

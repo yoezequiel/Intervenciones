@@ -1,26 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { Button, IconButton, Text, Surface, ActivityIndicator, useTheme } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { saveImagePermanently, deleteImage } from '../utils/mediaUtils';
+import { useModal } from '../context/ModalContext';
 
 const MultimediaSection = ({ photos, onPhotosChange }) => {
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const showModal = useModal();
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Se necesita acceso a la cámara para tomar fotos.');
+      showModal({ type: "warning", title: "Permiso denegado", message: "Se necesita acceso a la cámara para tomar fotos." });
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
     });
-
     if (!result.canceled) {
       processAndAddImage(result.assets[0].uri);
     }
@@ -29,16 +29,14 @@ const MultimediaSection = ({ photos, onPhotosChange }) => {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Se necesita acceso a la galería para seleccionar fotos.');
+      showModal({ type: "warning", title: "Permiso denegado", message: "Se necesita acceso a la galería para seleccionar fotos." });
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
       allowsMultipleSelection: true,
     });
-
     if (!result.canceled) {
       setLoading(true);
       try {
@@ -48,8 +46,8 @@ const MultimediaSection = ({ photos, onPhotosChange }) => {
           newPhotos.push(permanentUri);
         }
         onPhotosChange(newPhotos);
-      } catch (error) {
-        Alert.alert('Error', 'No se pudieron guardar algunas imágenes.');
+      } catch {
+        showModal({ type: "error", title: "Error", message: "No se pudieron guardar algunas imágenes." });
       } finally {
         setLoading(false);
       }
@@ -61,32 +59,26 @@ const MultimediaSection = ({ photos, onPhotosChange }) => {
     try {
       const permanentUri = await saveImagePermanently(uri);
       onPhotosChange([...photos, permanentUri]);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar la imagen.');
+    } catch {
+      showModal({ type: "error", title: "Error", message: "No se pudo guardar la imagen." });
     } finally {
       setLoading(false);
     }
   };
 
-  const removePhoto = async (index) => {
+  const removePhoto = (index) => {
     const photoToDelete = photos[index];
-    Alert.alert(
-      'Eliminar foto',
-      '¿Estás seguro de que quieres eliminar esta foto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const newPhotos = photos.filter((_, i) => i !== index);
-            onPhotosChange(newPhotos);
-            // Delete file from disk
-            await deleteImage(photoToDelete);
-          },
-        },
-      ]
-    );
+    showModal({
+      type: "confirm",
+      title: "Eliminar foto",
+      message: "¿Estás seguro de que querés eliminar esta foto?",
+      confirmLabel: "Eliminar",
+      confirmDestructive: true,
+      onConfirm: async () => {
+        onPhotosChange(photos.filter((_, i) => i !== index));
+        await deleteImage(photoToDelete);
+      },
+    });
   };
 
   return (

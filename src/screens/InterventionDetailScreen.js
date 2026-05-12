@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { View, StyleSheet, ScrollView, Alert, Image, Modal, TouchableWithoutFeedback, TouchableOpacity, Linking, Platform } from "react-native";
+import { View, StyleSheet, ScrollView, Image, Modal, ActivityIndicator, TouchableWithoutFeedback, TouchableOpacity, Linking, Platform } from "react-native";
 import {
     Card,
     Title,
@@ -17,6 +17,7 @@ import {
 import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import { generateInterventionPDF } from "../utils/pdfGenerator";
+import { useModal } from "../context/ModalContext";
 
 const getTypeIcon = (type) => {
     switch (type) {
@@ -58,6 +59,7 @@ const getTypeColor = (type, theme) => {
 const InterventionDetailScreen = ({ navigation, route }) => {
     const { getIntervention, deleteIntervention, updateIntervention, getCommunication, getSetting } =
         useDatabase();
+    const showModal = useModal();
     const [generating, setGenerating] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -82,8 +84,8 @@ const InterventionDetailScreen = ({ navigation, route }) => {
         setGeneratingPdf(true);
         try {
             await generateInterventionPDF(intervention, linkedCommunication);
-        } catch (error) {
-            Alert.alert("Error", "No se pudo generar el PDF");
+        } catch {
+            showModal({ type: "error", title: "Error", message: "No se pudo generar el PDF." });
         } finally {
             setGeneratingPdf(false);
         }
@@ -100,21 +102,17 @@ const InterventionDetailScreen = ({ navigation, route }) => {
     };
 
     const handleDelete = () => {
-        Alert.alert(
-            "Confirmar eliminación",
-            "¿Estás seguro de que quieres eliminar esta intervención?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Eliminar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteIntervention(intervention.id);
-                        navigation.goBack();
-                    },
-                },
-            ],
-        );
+        showModal({
+            type: "confirm",
+            title: "Eliminar intervención",
+            message: "¿Estás seguro de que querés eliminar esta intervención? Esta acción no se puede deshacer.",
+            confirmLabel: "Eliminar",
+            confirmDestructive: true,
+            onConfirm: async () => {
+                await deleteIntervention(intervention.id);
+                navigation.goBack();
+            },
+        });
     };
 
     const openMap = () => {
@@ -133,7 +131,7 @@ const InterventionDetailScreen = ({ navigation, route }) => {
                 ? `maps://maps.apple.com/?q=${encodedAddr}`
                 : `geo:0,0?q=${encodedAddr}`;
         } else {
-            Alert.alert("Sin ubicación", "Esta intervención no tiene dirección ni coordenadas registradas.");
+            showModal({ type: "info", title: "Sin ubicación", message: "Esta intervención no tiene dirección ni coordenadas registradas." });
             return;
         }
 
@@ -246,44 +244,45 @@ INSTRUCCIONES FINALES:
             
             let aiGeneratedReport = "";
 
+            let usedFallback = false;
+
             try {
-                const MODEL_NAME = "gemini-3-flash-preview";
-                
+                const MODEL_NAME = getSetting("gemini_model", "gemini-3-flash-preview");
+                const thinkingConfigRaw = getSetting("gemini_thinking_config", "");
+                const thinkingConfig = thinkingConfigRaw ? JSON.parse(thinkingConfigRaw) : null;
+
+                const generationConfig = { temperature: 1.0, maxOutputTokens: 2048 };
+                if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
+
                 const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`,
                     {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
+                            "x-goog-api-key": API_KEY,
                         },
                         body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: [{ text: prompt }],
-                                },
-                            ],
-                            generationConfig: {
-                                temperature: 0.2,
-                                topK: 40,
-                                topP: 0.95,
-                                maxOutputTokens: 2048,
-                            },
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig,
                         }),
                     },
                 );
 
                 if (!response.ok) {
-                    throw new Error(`Error de API: ${response.status} - ${response.statusText}`);
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error?.message || `Error ${response.status}`);
                 }
 
                 const data = await response.json();
 
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                     aiGeneratedReport = data.candidates[0].content.parts[0].text;
                 } else {
                     throw new Error("Respuesta inválida de la API");
                 }
             } catch (apiError) {
+                usedFallback = true;
                 console.error("Error con API de Gemini, usando generación local:", apiError.message);
 
                 const timeInfo = intervention.callTime
@@ -335,10 +334,11 @@ INSTRUCCIONES FINALES:
                 navigation.navigate("Report", {
                     interventionId: intervention.id,
                     report: aiGeneratedReport,
+                    reportSource: usedFallback ? "fallback" : "ai",
                 });
             }
         } catch (error) {
-            Alert.alert("Error", "No se pudo generar el informe. Verifica tu conexión a internet.");
+            showModal({ type: "error", title: "Error", message: "No se pudo generar el informe. Verificá tu conexión a internet." });
         } finally {
             setGenerating(false);
         }
@@ -399,6 +399,36 @@ INSTRUCCIONES FINALES:
                         </TouchableOpacity>
                     </Card.Content>
                 </Card>
+
+                {/* Incident-specific data */}
+                {(intervention.affectedSurface || (intervention.affectedEnvironments && intervention.affectedEnvironments.length > 0)) && (
+                    <Card style={styles.card} mode="elevated" elevation={1}>
+                        <Card.Content>
+                            {intervention.affectedSurface ? (
+                                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: intervention.affectedEnvironments?.length > 0 ? 12 : 0 }}>
+                                    <Avatar.Icon size={32} icon="pine-tree-fire" style={styles.transparentIcon} color={theme.colors.primary} />
+                                    <View style={{ marginLeft: 8 }}>
+                                        <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>Superficie afectada</Text>
+                                        <Text variant="bodyLarge">{intervention.affectedSurface}</Text>
+                                    </View>
+                                </View>
+                            ) : null}
+                            {intervention.affectedEnvironments && intervention.affectedEnvironments.length > 0 ? (
+                                <View>
+                                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                                        <Avatar.Icon size={32} icon="home-alert" style={styles.transparentIcon} color={theme.colors.error} />
+                                        <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>Ambientes afectados</Text>
+                                    </View>
+                                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                                        {intervention.affectedEnvironments.map((env, i) => (
+                                            <Chip key={i} compact mode="flat">{env}</Chip>
+                                        ))}
+                                    </View>
+                                </View>
+                            ) : null}
+                        </Card.Content>
+                    </Card>
+                )}
 
                 {/* Timeline Card */}
                 <Card style={styles.card} mode="elevated" elevation={1}>
@@ -499,7 +529,8 @@ INSTRUCCIONES FINALES:
                                             description={[
                                                 victim.age ? `${victim.age} años` : null,
                                                 victim.dni ? `DNI: ${victim.dni}` : null,
-                                                victim.description
+                                                victim.plate ? `Patente: ${victim.plate}` : null,
+                                                victim.description,
                                             ].filter(Boolean).join(" • ")}
                                             left={props => <List.Icon {...props} icon="account-injury" color={theme.colors.error} />}
                                             style={styles.listItem}
@@ -616,6 +647,21 @@ INSTRUCCIONES FINALES:
                 </Button>
             </Surface>
 
+            {/* PDF Generation Overlay */}
+            <Modal visible={generatingPdf} transparent animationType="fade">
+                <View style={styles.loadingOverlay}>
+                    <View style={[styles.loadingCard, { backgroundColor: theme.colors.surface }]}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginBottom: 16 }} />
+                        <Text variant="titleMedium" style={{ color: theme.colors.onSurface, textAlign: "center" }}>
+                            Generando PDF...
+                        </Text>
+                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4, textAlign: "center" }}>
+                            Por favor esperá un momento
+                        </Text>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Image Viewer Modal */}
             <Modal
                 visible={!!selectedImage}
@@ -649,6 +695,7 @@ INSTRUCCIONES FINALES:
 const createStyles = (theme) => StyleSheet.create({
     mainContainer: {
         flex: 1,
+        backgroundColor: theme.colors.background,
     },
     container: {
         flex: 1,
@@ -791,6 +838,19 @@ const createStyles = (theme) => StyleSheet.create({
         width: 120,
         height: 120,
         resizeMode: 'cover',
+    },
+    loadingOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    loadingCard: {
+        padding: 32,
+        borderRadius: 16,
+        alignItems: "center",
+        minWidth: 200,
+        elevation: 6,
     },
     modalContainer: {
         flex: 1,

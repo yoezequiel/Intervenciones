@@ -1,12 +1,9 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
     View,
     StyleSheet,
-    ScrollView,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
     TextInput,
     Button,
@@ -18,11 +15,13 @@ import {
 import { useDatabase } from "../context/DatabaseContext";
 import { InterventionType } from "../types";
 import AccordionSection from "../components/AccordionSection";
+import { useModal } from "../context/ModalContext";
 
 const CommunicationFormScreen = ({ navigation, route }) => {
     const { addCommunication, updateCommunication, getCommunication } = useDatabase();
     const theme = useTheme();
     const styles = useMemo(() => createStyles(theme), [theme]);
+    const showModal = useModal();
 
     const communicationId = route.params?.communicationId;
     const isEditing = !!communicationId;
@@ -46,15 +45,46 @@ const CommunicationFormScreen = ({ navigation, route }) => {
     const [incidentType, setIncidentType] = useState(existing?.incidentType || "");
     const [notes, setNotes] = useState(existing?.notes || "");
     const [loading, setLoading] = useState(false);
+    const [timeTouched, setTimeTouched] = useState(false);
+
+    const isValidTime = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+    const timeHasError = timeTouched && !!time && !isValidTime(time);
+
+    const isDirtyRef = useRef(false);
+    const isFirstRender = useRef(true);
+
+    useEffect(() => {
+        if (isFirstRender.current) { isFirstRender.current = false; return; }
+        isDirtyRef.current = true;
+    }, [callerName, callerPhone, time, address, incidentType, notes]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+            if (!isDirtyRef.current) return;
+            e.preventDefault();
+            showModal({
+                type: "confirm",
+                title: "Cambios sin guardar",
+                message: "¿Salir sin guardar? Se perderán los cambios.",
+                cancelLabel: "Seguir editando",
+                confirmLabel: "Salir",
+                confirmDestructive: true,
+                dismissable: false,
+                onConfirm: () => navigation.dispatch(e.data.action),
+            });
+        });
+        return unsubscribe;
+    }, [navigation]);
 
     const typeOptions = Object.values(InterventionType);
 
     const handleSubmit = useCallback(async () => {
         if (!callerName.trim() && !callerPhone.trim() && !address.trim()) {
-            Alert.alert(
-                "Datos requeridos",
-                "Completá al menos el nombre del llamante, teléfono o dirección."
-            );
+            showModal({
+                type: "warning",
+                title: "Datos requeridos",
+                message: "Completá al menos el nombre del llamante, teléfono o dirección.",
+            });
             return;
         }
         setLoading(true);
@@ -67,22 +97,30 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                 incidentType,
                 notes: notes.trim(),
             };
+            isDirtyRef.current = false;
             if (isEditing) {
                 await updateCommunication(communicationId, data);
-                Alert.alert("Éxito", "Comunicación actualizada", [
-                    { text: "OK", onPress: () => navigation.goBack() },
-                ]);
+                showModal({
+                    type: "success",
+                    title: "Actualizado",
+                    message: "Comunicación actualizada correctamente.",
+                    onConfirm: () => navigation.goBack(),
+                });
             } else {
                 await addCommunication(data);
-                Alert.alert("Éxito", "Comunicación registrada", [
-                    { text: "OK", onPress: () => navigation.goBack() },
-                ]);
+                showModal({
+                    type: "success",
+                    title: "Registrado",
+                    message: "Comunicación registrada correctamente.",
+                    onConfirm: () => navigation.goBack(),
+                });
             }
-        } catch (error) {
-            Alert.alert(
-                "Error",
-                `No se pudo ${isEditing ? "actualizar" : "registrar"} la comunicación`
-            );
+        } catch {
+            showModal({
+                type: "error",
+                title: "Error",
+                message: `No se pudo ${isEditing ? "actualizar" : "registrar"} la comunicación.`,
+            });
         } finally {
             setLoading(false);
         }
@@ -92,15 +130,15 @@ const CommunicationFormScreen = ({ navigation, route }) => {
     ]);
 
     return (
-        <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor: theme.colors.background }]}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
-            <ScrollView
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <KeyboardAwareScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollViewContent}
                 keyboardShouldPersistTaps="handled"
+                enableOnAndroid
+                enableAutomaticScroll
+                extraScrollHeight={24}
+                extraHeight={80}
                 showsVerticalScrollIndicator
             >
                 <AccordionSection title="Datos del Llamante" defaultExpanded icon="phone-incoming">
@@ -121,23 +159,29 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                         style={styles.input}
                         left={<TextInput.Icon icon="phone" />}
                     />
-                    <View style={styles.timeRow}>
+                    <View style={{ marginBottom: timeHasError ? 2 : 0 }}>
                         <TextInput
                             label="Hora del llamado"
                             value={time}
-                            onChangeText={setTime}
+                            onChangeText={(t) => { setTime(t); if (t.length >= 5) setTimeTouched(true); }}
+                            onBlur={() => setTimeTouched(true)}
                             placeholder="HH:MM"
                             mode="outlined"
-                            style={[styles.input, { flex: 1 }]}
+                            error={timeHasError}
+                            style={styles.input}
                             left={<TextInput.Icon icon="clock-outline" />}
+                            right={
+                                <TextInput.Icon
+                                    icon="clock-check-outline"
+                                    onPress={() => { setTime(getCurrentTime()); setTimeTouched(false); }}
+                                />
+                            }
                         />
-                        <Button
-                            mode="text"
-                            onPress={() => setTime(getCurrentTime())}
-                            style={styles.nowButton}
-                        >
-                            Ahora
-                        </Button>
+                        {timeHasError && (
+                            <Text variant="labelSmall" style={{ color: theme.colors.error, marginLeft: 4, marginTop: 2, marginBottom: 8 }}>
+                                Formato inválido — usá HH:MM (ej: 14:30)
+                            </Text>
+                        )}
                     </View>
                 </AccordionSection>
 
@@ -189,7 +233,7 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                         style={styles.input}
                     />
                 </AccordionSection>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <Surface style={styles.stickyFooter} elevation={4}>
                 <Button
@@ -203,7 +247,7 @@ const CommunicationFormScreen = ({ navigation, route }) => {
                     {isEditing ? "Actualizar Comunicación" : "Registrar Comunicación"}
                 </Button>
             </Surface>
-        </KeyboardAvoidingView>
+        </View>
     );
 };
 
