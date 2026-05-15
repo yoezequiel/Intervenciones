@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidad — FireLog</title>
+  <meta name="description" content="Política de privacidad de FireLog, la app de registro de intervenciones bomberiles." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #d32f2f;
+      --red-dark: #b71c1c;
+      --yellow: #FFC107;
+      --dark: #212121;
+      --gray: #616161;
+      --gray-light: #f5f5f5;
+      --white: #ffffff;
+      --border: rgba(0,0,0,.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--dark);
+      background: var(--white);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 860px; margin: 0 auto;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 800; font-size: 1.1rem; color: var(--red);
+      text-decoration: none;
+    }
+    .nav-back {
+      font-size: .85rem; color: var(--gray); text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+      transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    /* HEADER */
+    .page-header {
+      background: linear-gradient(135deg, var(--red-dark), var(--red));
+      color: white; padding: 56px 24px 48px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800; margin-bottom: 12px;
+    }
+    .page-header p {
+      opacity: .85; font-size: 1rem; max-width: 520px; margin: 0 auto;
+    }
+    .page-header .updated {
+      display: inline-block;
+      margin-top: 16px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      padding: 4px 14px; border-radius: 999px;
+      font-size: .8rem; font-weight: 600;
+    }
+
+    /* LAYOUT */
+    .content-wrap {
+      max-width: 860px; margin: 0 auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 48px;
+      align-items: start;
+      padding-top: 56px; padding-bottom: 80px;
+    }
+
+    /* TOC */
+    .toc {
+      position: sticky; top: 80px;
+    }
+    .toc h3 {
+      font-size: .75rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--gray);
+      margin-bottom: 12px;
+    }
+    .toc ul { list-style: none; }
+    .toc li + li { margin-top: 2px; }
+    .toc a {
+      display: block;
+      font-size: .85rem; color: var(--gray); text-decoration: none;
+      padding: 5px 10px; border-radius: 6px;
+      transition: all .2s; border-left: 2px solid transparent;
+    }
+    .toc a:hover {
+      color: var(--red); background: rgba(211,47,47,.06);
+      border-left-color: var(--red);
+    }
+
+    /* MAIN */
+    .main-content { min-width: 0; }
+
+    .section-block {
+      margin-bottom: 48px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-block:last-child {
+      border-bottom: none; margin-bottom: 0; padding-bottom: 0;
+    }
+
+    .section-block h2 {
+      font-size: 1.3rem; font-weight: 700;
+      margin-bottom: 16px; color: var(--dark);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-block h2 .icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(211,47,47,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; flex-shrink: 0;
+    }
+
+    .section-block p {
+      color: #444; font-size: .95rem; margin-bottom: 12px;
+    }
+    .section-block p:last-child { margin-bottom: 0; }
+
+    .section-block ul, .section-block ol {
+      padding-left: 20px; margin-top: 8px;
+    }
+    .section-block li {
+      color: #444; font-size: .95rem; margin-bottom: 6px;
+    }
+
+    .highlight-box {
+      background: rgba(211,47,47,.06);
+      border: 1px solid rgba(211,47,47,.15);
+      border-left: 3px solid var(--red);
+      border-radius: 8px; padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .highlight-box p {
+      margin: 0; font-size: .9rem; color: var(--dark);
+    }
+
+    .info-box {
+      background: rgba(255,193,7,.08);
+      border: 1px solid rgba(255,193,7,.3);
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px; padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .info-box p {
+      margin: 0; font-size: .9rem; color: var(--dark);
+    }
+
+    .contact-card {
+      background: var(--gray-light); border-radius: 12px; padding: 24px;
+      margin-top: 16px;
+    }
+    .contact-card p { margin-bottom: 6px; }
+    .contact-card a { color: var(--red); font-weight: 600; text-decoration: none; }
+    .contact-card a:hover { text-decoration: underline; }
+
+    /* FOOTER */
+    footer {
+      background: var(--dark); color: rgba(255,255,255,.5);
+      padding: 32px 24px; text-align: center;
+    }
+    .footer-inner { max-width: 860px; margin: 0 auto; }
+    .footer-logo { color: var(--white); font-weight: 800; margin-bottom: 8px; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+    .footer-links a { color: rgba(255,255,255,.5); font-size: .85rem; text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--yellow); }
+    .footer-copy { margin-top: 16px; font-size: .8rem; }
+
+    /* RESPONSIVE */
+    @media (max-width: 700px) {
+      .content-wrap {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding-top: 40px;
+      }
+      .toc { position: static; }
+      .toc-wrapper {
+        background: var(--gray-light); border-radius: 12px;
+        padding: 20px; margin-bottom: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">🔥 FireLog</a>
+    <a class="nav-back" href="index.html">← Volver al inicio</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1>Política de Privacidad</h1>
+  <p>Información clara sobre qué datos recopila FireLog, cómo los usa y cómo protege tu privacidad.</p>
+  <span class="updated">Última actualización: 14 de mayo de 2026</span>
+</div>
+
+<div class="content-wrap">
+
+  <!-- TOC -->
+  <aside>
+    <div class="toc-wrapper">
+      <div class="toc">
+        <h3>Contenidos</h3>
+        <ul>
+          <li><a href="#resumen">Resumen</a></li>
+          <li><a href="#quienes-somos">Quiénes somos</a></li>
+          <li><a href="#datos-recopilados">Datos recopilados</a></li>
+          <li><a href="#almacenamiento">Almacenamiento</a></li>
+          <li><a href="#permisos">Permisos del dispositivo</a></li>
+          <li><a href="#terceros">Servicios de terceros</a></li>
+          <li><a href="#firesync">FireSync (opcional)</a></li>
+          <li><a href="#menores">Menores de edad</a></li>
+          <li><a href="#derechos">Tus derechos</a></li>
+          <li><a href="#cambios">Cambios a esta política</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <div class="section-block" id="resumen">
+      <h2><span class="icon">📋</span> Resumen ejecutivo</h2>
+      <div class="highlight-box">
+        <p><strong>En pocas palabras:</strong> FireLog almacena todos los datos exclusivamente en tu dispositivo. No recopilamos, transmitimos ni compartimos tu información personal con terceros, <em>salvo en dos casos opcionales que el usuario activa voluntariamente</em>: (1) la función de informes con IA, que envía datos de la intervención a Google Gemini; y (2) FireSync, que sincroniza las intervenciones en la nube con cifrado AES-256-GCM. Ninguna de las dos funciones se activa por defecto.</p>
+      </div>
+      <p>Esta Política de Privacidad describe cómo FireLog ("la aplicación", "nosotros") maneja la información cuando usás nuestra aplicación móvil disponible en la Google Play Store.</p>
+    </div>
+
+    <div class="section-block" id="quienes-somos">
+      <h2><span class="icon">👤</span> Quiénes somos</h2>
+      <p>FireLog es una aplicación desarrollada de forma independiente para facilitar el registro de intervenciones del Cuerpo de Bomberos.</p>
+      <p>El desarrollador responsable puede ser contactado mediante la información provista en la sección <a href="#contacto" style="color:var(--red)">Contacto</a> de esta política.</p>
+    </div>
+
+    <div class="section-block" id="datos-recopilados">
+      <h2><span class="icon">🗂️</span> Qué datos recopila la app</h2>
+      <p>FireLog almacena los siguientes tipos de información <strong>únicamente en el dispositivo del usuario</strong>:</p>
+
+      <ul>
+        <li><strong>Datos de intervenciones:</strong> fecha y hora de llamado, salida y regreso; tipo de intervención; dirección del lugar; coordenadas GPS del lugar; notas y observaciones del personal; personas involucradas (testigos, víctimas).</li>
+        <li><strong>Datos de comunicaciones:</strong> información del llamador (nombre, teléfono), tipo de incidente reportado, dirección, notas.</li>
+        <li><strong>Multimedia:</strong> fotografías tomadas o seleccionadas desde la galería y adjuntadas a una intervención.</li>
+        <li><strong>Servicios intervinientes:</strong> listado de organismos que participaron (Policía, Ambulancia, etc.).</li>
+        <li><strong>Configuración de la app:</strong> preferencias de visualización y ajustes del usuario.</li>
+      </ul>
+
+      <div class="info-box">
+        <p>⚠️ <strong>No recopilamos</strong> nombre del usuario, dirección de correo electrónico, número de teléfono personal, datos de pago, identificadores de dispositivo ni ningún dato de uso o analítica.</p>
+      </div>
+    </div>
+
+    <div class="section-block" id="almacenamiento">
+      <h2><span class="icon">💾</span> Dónde se almacenan los datos</h2>
+      <p>Todos los datos ingresados en FireLog se guardan <strong>localmente en el dispositivo</strong> utilizando SQLite, una base de datos embebida. Esto significa que:</p>
+      <ul>
+        <li>Los datos <strong>no se transmiten a ningún servidor</strong> propio de la aplicación.</li>
+        <li>Los datos <strong>no se sincronizan</strong> con servicios en la nube (salvo la función opcional de IA descrita más adelante).</li>
+        <li>Si desinstalás la aplicación, todos los datos almacenados son eliminados del dispositivo.</li>
+        <li>La aplicación <strong>no requiere cuenta de usuario</strong> ni autenticación.</li>
+      </ul>
+      <p>Las fotografías adjuntas a intervenciones también se almacenan localmente en el almacenamiento interno o en la galería del dispositivo, según la configuración del sistema operativo.</p>
+    </div>
+
+    <div class="section-block" id="permisos">
+      <h2><span class="icon">🔐</span> Permisos del dispositivo</h2>
+      <p>FireLog solicita los siguientes permisos del sistema Android. Cada permiso se usa exclusivamente para la funcionalidad descrita:</p>
+
+      <ul>
+        <li>
+          <strong>Cámara (<code>CAMERA</code>):</strong> permite tomar fotografías del lugar de intervención para adjuntarlas al registro. No se accede a la cámara en segundo plano.
+        </li>
+        <li>
+          <strong>Almacenamiento (<code>READ_EXTERNAL_STORAGE</code>, <code>WRITE_EXTERNAL_STORAGE</code>):</strong> permite seleccionar fotos existentes de la galería y guardar archivos PDF generados en el almacenamiento del dispositivo.
+        </li>
+        <li>
+          <strong>Ubicación (<code>ACCESS_FINE_LOCATION</code>):</strong> permite capturar las coordenadas GPS del lugar de intervención cuando el usuario lo solicita explícitamente. La ubicación no se obtiene en segundo plano ni de forma continua.
+        </li>
+        <li>
+          <strong>Internet (<code>INTERNET</code>):</strong> utilizado únicamente cuando el usuario activa la generación de informes con inteligencia artificial. Si no se usa esta función, la app opera completamente sin acceso a internet.
+        </li>
+      </ul>
+
+      <div class="info-box">
+        <p>Podés revocar cualquier permiso desde la configuración de tu dispositivo en cualquier momento. Revocar un permiso deshabilitará únicamente la función correspondiente, sin afectar el resto de la aplicación.</p>
+      </div>
+    </div>
+
+    <div class="section-block" id="terceros">
+      <h2><span class="icon">🔗</span> Servicios de terceros</h2>
+      <p>FireLog utiliza el siguiente servicio externo de forma <strong>opcional</strong>:</p>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">Google Gemini (Generación de informes con IA)</h3>
+      <p>Cuando utilizás la función "Generar informe con IA", los datos de la intervención (tipo, dirección, horarios, notas y servicios intervinientes) son enviados a la API de Google Gemini para generar el texto del informe automáticamente.</p>
+      <ul>
+        <li>Esta función es <strong>completamente opcional</strong>. Si no la usás, no se transmite ningún dato a servicios externos.</li>
+        <li>Los datos enviados a Google Gemini están sujetos a la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color:var(--red)">Política de Privacidad de Google</a>.</li>
+        <li>Las fotografías adjuntas <strong>no se envían</strong> a Google Gemini.</li>
+        <li>Si la conexión a internet no está disponible, la app genera un informe local automáticamente sin necesidad de este servicio.</li>
+      </ul>
+
+      <div class="highlight-box">
+        <p><strong>No utilizamos</strong> Google Analytics, Firebase Analytics, Facebook SDK, herramientas de rastreo de usuarios, redes publicitarias ni ningún otro SDK de seguimiento o monetización.</p>
+      </div>
+    </div>
+
+    <div class="section-block" id="firesync">
+      <h2><span class="icon">☁️</span> FireSync — Sincronización opcional en la nube</h2>
+      <p>FireSync es un módulo <strong>completamente opcional</strong> que permite respaldar y sincronizar las intervenciones en la nube. Si no activás esta función, ningún dato sale del dispositivo.</p>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">¿Qué datos se almacenan en la nube?</h3>
+      <p>Cuando FireSync está activado, los siguientes datos de las intervenciones y comunicaciones se sincronizan con el servidor:</p>
+      <ul>
+        <li>Datos de intervenciones: tipo, fecha, hora, dirección, coordenadas GPS, notas, servicios intervinientes y personas involucradas.</li>
+        <li>Datos de comunicaciones: tipo de incidente, dirección, notas y estado.</li>
+        <li>Metadatos de sincronización: timestamp de creación y última modificación.</li>
+      </ul>
+      <div class="info-box">
+        <p>⚠️ Las <strong>fotografías adjuntas no se sincronizan</strong> con la nube. Solo se almacenan en el dispositivo.</p>
+      </div>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">Cifrado y seguridad</h3>
+      <p>Todos los datos enviados a la nube se cifran con <strong>AES-256-GCM</strong> en el servidor antes de ser almacenados en la base de datos. La clave de cifrado se deriva a partir de un secreto maestro y del identificador único de cada usuario mediante HKDF-SHA256. Esto garantiza que, incluso si la base de datos en la nube fuera comprometida, los datos sean completamente ilegibles sin las claves correspondientes.</p>
+      <p>Las credenciales de acceso (token de autenticación) se almacenan de forma segura en el <strong>Android Keystore</strong> del dispositivo mediante <code>expo-secure-store</code>, y nunca en texto plano.</p>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">Proveedor de infraestructura</h3>
+      <p>El backend de FireSync se aloja en <strong>Vercel</strong> y utiliza <strong>Turso</strong> como base de datos en la nube. Ambos servicios están sujetos a sus respectivas políticas de privacidad y seguridad.</p>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">Consentimiento y registro</h3>
+      <p>Para activar FireSync, el usuario debe registrarse aceptando explícitamente esta política de privacidad. El timestamp de consentimiento queda registrado. FireSync nunca se activa de forma automática.</p>
+
+      <h3 style="font-size:1rem; font-weight:700; margin: 20px 0 8px;">Tus derechos sobre los datos en la nube (RGPD)</h3>
+      <ul>
+        <li><strong>Eliminación (Art. 17):</strong> podés eliminar tu cuenta y todos los datos almacenados en la nube desde la configuración de la app. La eliminación es inmediata e irreversible.</li>
+        <li><strong>Portabilidad (Art. 20):</strong> podés exportar todos tus datos en la nube en formato legible en cualquier momento desde la app.</li>
+        <li><strong>Revocación:</strong> podés desactivar FireSync en cualquier momento. Los datos locales no se ven afectados.</li>
+      </ul>
+
+      <div class="highlight-box">
+        <p><strong>Sin FireSync:</strong> si no activás esta función, ningún dato abandona tu dispositivo y esta sección no aplica a tu uso de la app.</p>
+      </div>
+    </div>
+
+    <div class="section-block" id="menores">
+      <h2><span class="icon">👶</span> Menores de edad</h2>
+      <p>FireLog está destinada exclusivamente a uso profesional por parte de personal del Cuerpo de Bomberos y no está dirigida a menores de 18 años.</p>
+      <p>No recopilamos conscientemente información de menores de edad. Si tuviéramos conocimiento de haber recibido datos de un menor sin el consentimiento apropiado, tomaríamos medidas para eliminar dicha información.</p>
+    </div>
+
+    <div class="section-block" id="derechos">
+      <h2><span class="icon">⚖️</span> Tus derechos sobre los datos</h2>
+      <p>Dado que todos los datos se almacenan localmente en tu dispositivo, tenés control total sobre ellos:</p>
+      <ul>
+        <li><strong>Acceso:</strong> podés ver todos tus datos directamente en la app, en cualquier momento.</li>
+        <li><strong>Eliminación:</strong> podés eliminar intervenciones, comunicaciones o todos los datos desinstalando la aplicación.</li>
+        <li><strong>Portabilidad:</strong> podés exportar cualquier intervención como PDF para conservarla fuera de la app.</li>
+        <li><strong>Rectificación:</strong> podés editar cualquier registro desde la pantalla de detalle de la intervención.</li>
+      </ul>
+      <p>Si usás <strong>FireSync</strong>, también tenés los derechos adicionales detallados en la <a href="#firesync" style="color:var(--red)">sección FireSync</a>: eliminación completa de cuenta y exportación de datos en la nube.</p>
+      <p>Si considerás que tus datos fueron manejados de forma incorrecta, podés contactarnos mediante la dirección indicada a continuación.</p>
+    </div>
+
+    <div class="section-block" id="cambios">
+      <h2><span class="icon">🔄</span> Cambios a esta política</h2>
+      <p>Podemos actualizar esta Política de Privacidad ocasionalmente. Cuando realicemos cambios significativos, actualizaremos la fecha de "Última actualización" al comienzo de esta página.</p>
+      <p>Te recomendamos revisar esta política periódicamente. El uso continuado de la aplicación después de la publicación de cambios constituye tu aceptación de la política revisada.</p>
+    </div>
+
+    <div class="section-block" id="contacto">
+      <h2><span class="icon">✉️</span> Contacto</h2>
+      <p>Si tenés preguntas, consultas o solicitudes relacionadas con esta Política de Privacidad o con el tratamiento de tus datos, podés contactarnos:</p>
+      <div class="contact-card">
+        <p><strong>Aplicación:</strong> FireLog</p>
+        <p><strong>Paquete Android:</strong> com.yoezequiel.IntervencionBomberos</p>
+        <p><strong>Correo electrónico:</strong> <a href="mailto:ezequielcasiano15@gmail.com">ezequielcasiano15@gmail.com</a></p>
+      </div>
+      <p style="margin-top: 16px;">Nos comprometemos a responder toda consulta dentro de los 30 días hábiles.</p>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">🔥 FireLog</div>
+    <p>App de registro de intervenciones para Cuerpo de Bomberos.</p>
+    <div class="footer-links">
+      <a href="index.html">Inicio</a>
+      <a href="privacy.html">Política de Privacidad</a>
+      <a href="mailto:ezequielcasiano15@gmail.com">Contacto</a>
+    </div>
+    <p class="footer-copy">© 2026 FireLog. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+</body>
+</html>

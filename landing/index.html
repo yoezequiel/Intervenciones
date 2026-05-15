@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FireLog — Registro de Intervenciones Bomberiles</title>
+  <meta name="description" content="FireLog es la app para bomberos que permite registrar intervenciones de emergencia en campo, sin conexión, y generar informes técnicos con inteligencia artificial." />
+  <meta property="og:title" content="FireLog — Registro de Intervenciones Bomberiles" />
+  <meta property="og:description" content="App offline para bomberos: registrá intervenciones en campo, capturá GPS y fotos, y generá informes automáticos con IA." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #d32f2f;
+      --red-dark: #b71c1c;
+      --red-light: #ef5350;
+      --yellow: #FFC107;
+      --yellow-dark: #F9A825;
+      --dark: #212121;
+      --gray: #616161;
+      --gray-light: #f5f5f5;
+      --white: #ffffff;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,.12);
+      --shadow-lg: 0 12px 48px rgba(0,0,0,.18);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--dark);
+      background: var(--white);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 1.2rem; color: var(--red);
+      text-decoration: none;
+    }
+    .nav-logo .flame {
+      width: 36px; height: 36px;
+      background: var(--red);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .nav-links {
+      display: flex; gap: 32px; list-style: none;
+    }
+    .nav-links a {
+      color: var(--gray); font-size: .9rem; font-weight: 500;
+      text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--red); }
+    .nav-cta {
+      background: var(--red); color: var(--white) !important;
+      padding: 8px 18px; border-radius: 8px;
+      font-weight: 600 !important; font-size: .85rem !important;
+      transition: background .2s !important;
+    }
+    .nav-cta:hover { background: var(--red-dark) !important; color: var(--white) !important; }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 50%, #e53935 100%);
+      color: var(--white);
+      padding: 96px 24px 80px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      padding: 6px 16px; border-radius: 999px;
+      font-size: .8rem; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900; line-height: 1.1;
+      margin-bottom: 20px; letter-spacing: -.02em;
+    }
+    .hero h1 span { color: var(--yellow); }
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      max-width: 580px; margin: 0 auto 40px;
+      opacity: .9; line-height: 1.7;
+    }
+    .hero-buttons {
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--yellow); color: var(--dark);
+      padding: 14px 28px; border-radius: 12px;
+      font-weight: 700; font-size: 1rem; text-decoration: none;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 20px rgba(255,193,7,.4);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,193,7,.5); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.15); color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.4);
+      padding: 14px 28px; border-radius: 12px;
+      font-weight: 600; font-size: 1rem; text-decoration: none;
+      transition: background .2s;
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,.25); }
+    .hero-stats {
+      display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+      margin-top: 64px; padding-top: 48px;
+      border-top: 1px solid rgba(255,255,255,.2);
+    }
+    .stat { text-align: center; }
+    .stat-number { font-size: 2rem; font-weight: 900; color: var(--yellow); }
+    .stat-label { font-size: .85rem; opacity: .8; margin-top: 2px; }
+
+    /* ── SECTION BASE ── */
+    section { padding: 88px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block;
+      background: rgba(211,47,47,.1); color: var(--red);
+      padding: 4px 14px; border-radius: 999px;
+      font-size: .78rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 800; line-height: 1.2;
+      letter-spacing: -.02em; margin-bottom: 16px;
+    }
+    .section-subtitle {
+      font-size: 1.05rem; color: var(--gray); max-width: 560px;
+    }
+    .section-header { margin-bottom: 56px; }
+
+    /* ── FEATURES ── */
+    .features { background: var(--gray-light); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .feature-icon {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; margin-bottom: 20px;
+    }
+    .icon-red { background: rgba(211,47,47,.12); }
+    .icon-yellow { background: rgba(255,193,7,.15); }
+    .icon-dark { background: rgba(33,33,33,.08); }
+    .icon-blue { background: rgba(33,150,243,.1); }
+    .icon-green { background: rgba(76,175,80,.1); }
+    .icon-purple { background: rgba(156,39,176,.1); }
+    .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { color: var(--gray); font-size: .93rem; line-height: 1.6; }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: flex; flex-direction: column; gap: 0;
+      max-width: 700px;
+    }
+    .step {
+      display: flex; gap: 24px;
+      position: relative; padding-bottom: 40px;
+    }
+    .step:last-child { padding-bottom: 0; }
+    .step-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .step-number {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--red); color: var(--white);
+      font-weight: 800; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; box-shadow: 0 0 0 6px rgba(211,47,47,.12);
+    }
+    .step-line {
+      flex: 1; width: 2px; background: rgba(211,47,47,.2);
+      margin-top: 8px;
+    }
+    .step:last-child .step-line { display: none; }
+    .step-content { padding-top: 10px; }
+    .step-content h3 { font-weight: 700; font-size: 1.1rem; margin-bottom: 6px; }
+    .step-content p { color: var(--gray); font-size: .93rem; }
+
+    /* ── PERMISSIONS ── */
+    .permissions { background: var(--gray-light); }
+    .perms-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .perm-card {
+      background: var(--white); border-radius: 12px; padding: 20px 24px;
+      display: flex; gap: 14px; align-items: flex-start;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .perm-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .perm-card h4 { font-size: .95rem; font-weight: 700; margin-bottom: 3px; }
+    .perm-card p { font-size: .82rem; color: var(--gray); }
+
+    /* ── TECH ── */
+    .tech-list {
+      display: flex; flex-wrap: wrap; gap: 12px;
+    }
+    .tech-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 999px;
+      background: var(--gray-light);
+      font-size: .85rem; font-weight: 600; color: var(--dark);
+      border: 1px solid rgba(0,0,0,.07);
+    }
+
+    /* ── FIRESYNC ── */
+    .firesync {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: var(--white);
+    }
+    .firesync .section-tag { background: rgba(100,181,246,.15); color: #90caf9; }
+    .firesync h2 { color: var(--white); }
+    .firesync .section-subtitle { color: rgba(255,255,255,.65); }
+    .firesync-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .firesync-pills {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 32px;
+    }
+    .firesync-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: .82rem; font-weight: 600;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.85);
+    }
+    .firesync-cards {
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .firesync-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; padding: 20px 24px;
+      display: flex; gap: 16px; align-items: flex-start;
+      transition: background .2s;
+    }
+    .firesync-card:hover { background: rgba(255,255,255,.1); }
+    .firesync-card-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+    .firesync-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .firesync-card p { font-size: .88rem; color: rgba(255,255,255,.65); line-height: 1.5; }
+    .firesync-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,193,7,.15);
+      border: 1px solid rgba(255,193,7,.3);
+      color: var(--yellow);
+      padding: 5px 14px; border-radius: 999px;
+      font-size: .8rem; font-weight: 700;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 700px) {
+      .firesync-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── CTA FINAL ── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--dark) 0%, #424242 100%);
+      color: var(--white); text-align: center;
+    }
+    .cta-section h2 { color: var(--white); }
+    .cta-section p { color: rgba(255,255,255,.75); font-size: 1.05rem; max-width: 500px; margin: 0 auto 40px; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--dark); color: rgba(255,255,255,.6);
+      padding: 40px 24px; text-align: center;
+    }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-logo { color: var(--white); font-weight: 800; font-size: 1.1rem; margin-bottom: 8px; }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+    .footer-links a { color: rgba(255,255,255,.5); font-size: .85rem; text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--yellow); }
+    .footer-copy { margin-top: 24px; font-size: .8rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav .nav-links { display: none; }
+      .hero { padding: 72px 20px 60px; }
+      .hero-stats { gap: 24px; }
+      section { padding: 64px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <div class="flame">🔥</div>
+      FireLog
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Funciones</a></li>
+      <li><a href="#how-it-works">Cómo funciona</a></li>
+      <li><a href="#permisos">Permisos</a></li>
+      <li><a href="#firesync">FireSync</a></li>
+      <li><a href="privacy.html" class="nav-cta">Privacidad</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🚒 Para el Cuerpo de Bomberos</div>
+  <h1>El registro de<br /><span>intervenciones</span><br />que tu cuartel necesita</h1>
+  <p>FireLog es una app móvil diseñada para bomberos. Registrá intervenciones en campo, capturá GPS y fotos, y generá informes técnicos automáticos con inteligencia artificial — sin necesitar conexión a internet.</p>
+  <div class="hero-buttons">
+    <a href="#" class="btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.33.18.7.24 1.06.19L13.64 14 4 4.05c-.36-.05-.73.01-1.06.19C2.23 4.76 1.75 5.8 1.75 7v9.99c0 1.2.48 2.24 1.43 2.77z"/><path d="M16.96 10.73L14 7.77 4.84 2.08c.24-.05.49-.05.73 0L18.2 9.4l-1.24 1.33z"/><path d="M18.2 14.6l-1.24-1.33L14 16.23l2.96-2.96 1.24 1.33L22.25 12 18.2 9.4l-1.24 1.33L20.22 12l-2.02 2.6z"/><path d="M5.57 21.92L14 16.23l-2.36-2.36L4.84 21.92c.24.05.49.05.73 0z"/></svg>
+      Descargar en Play Store
+    </a>
+    <a href="#features" class="btn-secondary">
+      Ver funciones →
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-number">100%</div>
+      <div class="stat-label">Offline</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">0</div>
+      <div class="stat-label">Datos en la nube</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">IA</div>
+      <div class="stat-label">Informes automáticos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">PDF</div>
+      <div class="stat-label">Exportación directa</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Funcionalidades</div>
+      <h2>Todo lo que necesitás,<br />siempre disponible</h2>
+      <p class="section-subtitle">Diseñado para el trabajo real en campo: robusto, rápido y que funcione aunque no haya señal.</p>
+    </div>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon icon-red">📴</div>
+        <h3>100% Offline</h3>
+        <p>Toda la información se guarda localmente en el dispositivo con SQLite. No necesitás señal ni WiFi para registrar ninguna intervención.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-yellow">🤖</div>
+        <h3>Informes con IA</h3>
+        <p>Con un toque generás un informe técnico completo y profesional usando Google Gemini. Si no hay conexión, el sistema genera un informe local automáticamente.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-blue">📍</div>
+        <h3>Captura GPS</h3>
+        <p>Obtené las coordenadas exactas del lugar de intervención con un toque, directamente desde el formulario de registro.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-green">📸</div>
+        <h3>Registro fotográfico</h3>
+        <p>Adjuntá fotos del lugar tomadas en el momento o desde la galería. Todo queda asociado a la intervención correspondiente.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-purple">📄</div>
+        <h3>Exportación a PDF</h3>
+        <p>Generá y compartí el informe como PDF directamente desde la app, listo para enviar por mail o WhatsApp.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-dark">📡</div>
+        <h3>Gestión de comunicaciones</h3>
+        <p>Registrá llamados y comunicaciones con sus estados (recibido, reportado, desplazado) y convertí uno en intervención con un solo toque.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-red">📋</div>
+        <h3>Formulario multi-paso</h3>
+        <p>Flujo guiado para capturar datos cronológicos, ubicación, servicios intervinientes, personas y notas — sin perderse ningún campo importante.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-yellow">🔍</div>
+        <h3>Búsqueda y filtros</h3>
+        <p>Buscá intervenciones por dirección, filtrá por tipo de incidente y ordenalas cronológicamente para encontrar cualquier registro en segundos.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon icon-dark">🚒</div>
+        <h3>Tipos de intervención</h3>
+        <p>Incendio estructural, forestal, accidente de tránsito, rescate, alarma falsa, servicio especial y más — con registro de todos los servicios intervinientes.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Cómo funciona</div>
+      <h2>De la emergencia<br />al informe en minutos</h2>
+      <p class="section-subtitle">Un flujo simple y rápido pensado para el trabajo bajo presión.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-left">
+          <div class="step-number">1</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <h3>Recibís el llamado</h3>
+          <p>Registrá la comunicación entrante con los datos del llamador, tipo de incidente y dirección. Actualizá el estado en tiempo real: recibido → reportado → desplazado.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left">
+          <div class="step-number">2</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <h3>Registrás la intervención</h3>
+          <p>Completás el formulario paso a paso: horarios de llamado, salida y regreso; dirección con GPS integrado; personas involucradas; servicios que intervinieron y notas.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left">
+          <div class="step-number">3</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <h3>Fotografiás el lugar</h3>
+          <p>Adjuntás fotos desde la cámara o galería directamente en el formulario. Todo queda guardado localmente en el dispositivo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left">
+          <div class="step-number">4</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <h3>Generás el informe</h3>
+          <p>Con un toque, la IA redacta un informe técnico profesional listo para presentar. Exportalo a PDF o compartilo directamente por cualquier app.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PERMISOS -->
+<section class="permissions" id="permisos">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Permisos</div>
+      <h2>¿Por qué pedimos<br />estos permisos?</h2>
+      <p class="section-subtitle">Solo solicitamos lo estrictamente necesario para que la app funcione. Tus datos nunca salen del dispositivo.</p>
+    </div>
+    <div class="perms-grid">
+      <div class="perm-card">
+        <div class="perm-icon">📷</div>
+        <div>
+          <h4>Cámara</h4>
+          <p>Para tomar fotos del lugar de intervención y adjuntarlas al registro.</p>
+        </div>
+      </div>
+      <div class="perm-card">
+        <div class="perm-icon">🖼️</div>
+        <div>
+          <h4>Galería / Almacenamiento</h4>
+          <p>Para seleccionar fotos existentes y guardar archivos PDF generados.</p>
+        </div>
+      </div>
+      <div class="perm-card">
+        <div class="perm-icon">📍</div>
+        <div>
+          <h4>Ubicación</h4>
+          <p>Para capturar las coordenadas GPS del lugar de intervención.</p>
+        </div>
+      </div>
+      <div class="perm-card">
+        <div class="perm-icon">🌐</div>
+        <div>
+          <h4>Internet (opcional)</h4>
+          <p>Solo para la generación de informes con IA. La app funciona completamente sin conexión.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH -->
+<section>
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Tecnología</div>
+      <h2>Construida con<br />tecnología moderna</h2>
+      <p class="section-subtitle">Una base técnica sólida que garantiza rendimiento y confiabilidad en situaciones críticas.</p>
+    </div>
+    <div class="tech-list">
+      <span class="tech-chip">⚛️ React Native</span>
+      <span class="tech-chip">📦 Expo</span>
+      <span class="tech-chip">🗄️ SQLite (local)</span>
+      <span class="tech-chip">🤖 Google Gemini</span>
+      <span class="tech-chip">🗺️ GPS Integrado</span>
+      <span class="tech-chip">📄 Exportación PDF</span>
+      <span class="tech-chip">🎨 Material Design</span>
+      <span class="tech-chip">📷 Expo Camera</span>
+      <span class="tech-chip">☁️ FireSync (opcional)</span>
+      <span class="tech-chip">🔒 Cifrado AES-256-GCM</span>
+    </div>
+  </div>
+</section>
+
+<!-- FIRESYNC -->
+<section class="firesync" id="firesync">
+  <div class="section-inner">
+    <div class="firesync-grid">
+
+      <div>
+        <div class="section-tag">FireSync</div>
+        <h2>Tus datos,<br />siempre respaldados</h2>
+        <p class="section-subtitle" style="margin-bottom: 28px;">FireSync es el módulo opcional de sincronización en la nube. Activalo si querés tener tus intervenciones respaldadas y accesibles desde cualquier dispositivo.</p>
+        <div class="firesync-pills">
+          <span class="firesync-pill">🔒 Cifrado AES-256-GCM</span>
+          <span class="firesync-pill">☁️ Sync automático</span>
+          <span class="firesync-pill">📤 Exportación de datos</span>
+          <span class="firesync-pill">🗑️ Eliminación total</span>
+          <span class="firesync-pill">✅ Opcional</span>
+        </div>
+        <div class="firesync-badge">⚡ 100% opcional — la app funciona sin FireSync</div>
+      </div>
+
+      <div class="firesync-cards">
+        <div class="firesync-card">
+          <div class="firesync-card-icon">🔒</div>
+          <div>
+            <h3>Cifrado de extremo a extremo</h3>
+            <p>Todos tus datos se cifran con AES-256-GCM antes de salir del servidor. Si la base de datos en la nube fuera comprometida, los datos son ilegibles.</p>
+          </div>
+        </div>
+        <div class="firesync-card">
+          <div class="firesync-card-icon">🔄</div>
+          <div>
+            <h3>Sincronización inteligente</h3>
+            <p>Los cambios se encolan localmente y se sincronizan automáticamente cuando hay conexión. Nunca perdés trabajo por falta de señal.</p>
+          </div>
+        </div>
+        <div class="firesync-card">
+          <div class="firesync-card-icon">📤</div>
+          <div>
+            <h3>Exportación y eliminación</h3>
+            <p>Podés exportar todos tus datos en cualquier momento o eliminar tu cuenta y todos los registros de la nube con un solo toque — cumpliendo con el RGPD.</p>
+          </div>
+        </div>
+        <div class="firesync-card">
+          <div class="firesync-card-icon">🔑</div>
+          <div>
+            <h3>Token seguro en el dispositivo</h3>
+            <p>Las credenciales se guardan en el Android Keystore mediante expo-secure-store. Nunca se almacenan en texto plano.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="section-inner">
+    <h2>Lista para usar<br />en tu cuartel</h2>
+    <p>Descargala gratis en la Play Store y empezá a registrar intervenciones desde hoy.</p>
+    <a href="#" class="btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.33.18.7.24 1.06.19L13.64 14 4 4.05c-.36-.05-.73.01-1.06.19C2.23 4.76 1.75 5.8 1.75 7v9.99c0 1.2.48 2.24 1.43 2.77z"/><path d="M16.96 10.73L14 7.77 4.84 2.08c.24-.05.49-.05.73 0L18.2 9.4l-1.24 1.33z"/><path d="M18.2 14.6l-1.24-1.33L14 16.23l2.96-2.96 1.24 1.33L22.25 12 18.2 9.4l-1.24 1.33L20.22 12l-2.02 2.6z"/><path d="M5.57 21.92L14 16.23l-2.36-2.36L4.84 21.92c.24.05.49.05.73 0z"/></svg>
+      Descargar gratis — Play Store
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">🔥 FireLog</div>
+    <p>App de registro de intervenciones para Cuerpo de Bomberos.</p>
+    <div class="footer-links">
+      <a href="privacy.html">Política de Privacidad</a>
+      <a href="mailto:ezequielcasiano15@gmail.com">Contacto</a>
+    </div>
+    <p class="footer-copy">© 2026 FireLog. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+</body>
+</html>
